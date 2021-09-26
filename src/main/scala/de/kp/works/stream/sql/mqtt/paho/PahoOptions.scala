@@ -54,7 +54,82 @@ class PahoOptions(options: DataSourceOptions) extends Logging {
 
     val mqttConnectOptions = new MqttConnectOptions
 
-    // TODO
+    /* User authentication */
+
+    val username: Option[String] =
+      settings.get(MQTT_STREAM_SETTINGS.USERNAME)
+
+    val password: Option[String] =
+      settings.get(MQTT_STREAM_SETTINGS.PASSWORD)
+
+    (username, password) match {
+
+      case (Some(u: String), Some(p: String)) =>
+        mqttConnectOptions.setUserName(u)
+        mqttConnectOptions.setPassword(p.toCharArray)
+
+      case _ =>
+
+    }
+
+    /* Connection timeout */
+
+    val connectionTimeout: Int =
+      settings.getOrElse(MQTT_STREAM_SETTINGS.TIMEOUT,
+        MqttConnectOptions.CONNECTION_TIMEOUT_DEFAULT.toString).toInt
+
+    mqttConnectOptions.setConnectionTimeout(connectionTimeout)
+
+    /* Keep alive interval */
+
+    val keepAlive: Int =
+      settings.getOrElse(MQTT_STREAM_SETTINGS.KEEP_ALIVE,
+        MqttConnectOptions.KEEP_ALIVE_INTERVAL_DEFAULT.toString).toInt
+
+    mqttConnectOptions.setKeepAliveInterval(keepAlive)
+
+    /* Mqtt version */
+
+    val mqttVersion: Int = {
+      val version = settings.get(MQTT_STREAM_SETTINGS.VERSION)
+      version match {
+        case Some(v) =>
+          v match {
+            case "3.1" =>
+              MqttConnectOptions.MQTT_VERSION_3_1
+            case "3.1.1" =>
+              MqttConnectOptions.MQTT_VERSION_3_1_1
+            case _ =>
+              MqttConnectOptions.MQTT_VERSION_DEFAULT
+          }
+        case _ => MqttConnectOptions.MQTT_VERSION_DEFAULT
+      }
+    }
+
+    mqttConnectOptions.setMqttVersion(mqttVersion)
+
+    /* Clean session */
+
+    val cleanSession: Boolean = settings
+      .getOrElse(MQTT_STREAM_SETTINGS.CLEAN_SESSION, "false").toBoolean
+
+    mqttConnectOptions.setCleanSession(cleanSession)
+
+    /* Auto reconnect */
+
+    val autoReconnect: Boolean = settings
+      .getOrElse(MQTT_STREAM_SETTINGS.AUTO_RECONNECT, "false").toBoolean
+
+    mqttConnectOptions.setAutomaticReconnect(autoReconnect)
+
+    /* MAX INFLIGHT */
+
+    val maxInflight: Int = settings
+      .getOrElse(MQTT_STREAM_SETTINGS.MAX_INFLIGHT, "60").toInt
+
+    mqttConnectOptions.setMaxInflight(maxInflight)
+
+    // TODO :: SSL SUPPORT
 
     mqttConnectOptions
 

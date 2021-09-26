@@ -23,10 +23,18 @@ object MQTT_STREAM_SETTINGS {
   val FORMAT_DITTO = "de.kp.works.stream.sql.mqtt.ditto.DittoSourceProvider"
   val FORMAT_PAHO  = "de.kp.works.stream.sql.mqtt.paho.PahoSourceProvider"
 
-  val BROKER_URL  = "broker.url"
-  val CLIENT_ID   = "client.id"
-  val PERSISTENCE = "persistence"
-  val QOS         = "qos"
-  val TOPICS      = "topics"
+  val AUTO_RECONNECT = "auto.reconnect"
+  val BROKER_URL     = "broker.url"
+  val CLEAN_SESSION  = "clean.session"
+  val CLIENT_ID      = "client.id"
+  val KEEP_ALIVE     = "keep.alive"
+  val MAX_INFLIGHT   = "max.inflight"
+  val PASSWORD       = "password"
+  val PERSISTENCE    = "persistence"
+  val QOS            = "qos"
+  val TIMEOUT        = "timeout"
+  val TOPICS         = "topics"
+  val USERNAME       = "username"
+  val VERSION        = "version"
 
 }
