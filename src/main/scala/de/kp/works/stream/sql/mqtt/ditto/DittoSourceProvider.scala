@@ -29,7 +29,25 @@ import java.util.Optional
 class DittoSourceProvider extends DataSourceV2
   with MicroBatchReadSupport with DataSourceRegister with Logging {
 
-  override def createMicroBatchReader(optional: Optional[StructType], s: String, dataSourceOptions: DataSourceOptions): MicroBatchReader = ???
+  override def createMicroBatchReader(
+     schema: Optional[StructType],
+     checkpointLocation: String,
+     options: DataSourceOptions): MicroBatchReader = {
 
-  override def shortName(): String = ???
+    def e(s: String) = new IllegalArgumentException(s)
+
+    if (schema.isPresent) {
+      throw e("The mqtt source does not support a user-specified schema.")
+    }
+    /*
+     * Transform options provided with the respective
+     * datasource into a `Ditto` specific representation
+     */
+    val dittoOptions = new DittoOptions(options)
+    new DittoSource(dittoOptions)
+
+  }
+
+  override def shortName(): String = "ditto"
+
 }
