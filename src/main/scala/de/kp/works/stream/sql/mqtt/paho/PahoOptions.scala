@@ -20,10 +20,12 @@ package de.kp.works.stream.sql.mqtt.paho
 
 import de.kp.works.stream.sql.Logging
 import de.kp.works.stream.sql.mqtt.MQTT_STREAM_SETTINGS
+import de.kp.works.stream.ssl.SslOptions
 import org.apache.spark.sql.sources.v2.DataSourceOptions
 import org.eclipse.paho.client.mqttv3.persist.{MemoryPersistence, MqttDefaultFilePersistence}
 import org.eclipse.paho.client.mqttv3.{MqttClient, MqttClientPersistence, MqttConnectOptions}
 
+import javax.net.ssl.SSLSocketFactory
 import scala.collection.JavaConverters._
 
 class PahoOptions(options: DataSourceOptions) extends Logging {
@@ -129,8 +131,11 @@ class PahoOptions(options: DataSourceOptions) extends Logging {
 
     mqttConnectOptions.setMaxInflight(maxInflight)
 
-    // TODO :: SSL SUPPORT
+    /* Check whether SSL settings are provided */
 
+    if (!isSsl) return mqttConnectOptions
+
+    mqttConnectOptions.setSocketFactory(getSslSocketFactory)
     mqttConnectOptions
 
   }
@@ -165,4 +170,91 @@ class PahoOptions(options: DataSourceOptions) extends Logging {
 
   }
 
+  private def isSsl:Boolean = {
+
+    var ssl:Boolean = false
+    settings.keySet.foreach(key => {
+      if (key.startsWith("ssl.")) ssl = true
+    })
+
+    ssl
+
+  }
+
+  private def getSslSocketFactory:SSLSocketFactory = {
+
+    val tlsVersion = settings
+      .getOrElse(MQTT_STREAM_SETTINGS.SSL_PROTOCOL, "TLS")
+
+    /*
+     * The keystore file must be defined
+     */
+    val keyStoreFile = settings
+      .getOrElse(MQTT_STREAM_SETTINGS.SSL_KEYSTORE_FILE,
+        throw new Exception(s"No keystore file specified."))
+    /*
+     * - JKS      Java KeyStore
+     * - JCEKS    Java Cryptography Extension KeyStore
+     * - PKCS #12 Public-Key Cryptography Standards #12 KeyStore
+     * - BKS      Bouncy Castle KeyStore
+     * - BKS-V1   Older and incompatible version of Bouncy Castle KeyStore
+     */
+    val keyStoreType = settings
+      .getOrElse(MQTT_STREAM_SETTINGS.SSL_KEYSTORE_TYPE, "JKS")
+
+    val keyStorePass = settings
+      .getOrElse(MQTT_STREAM_SETTINGS.SSL_KEYSTORE_PASS, "")
+
+    val keyStoreAlgo = settings
+      .getOrElse(MQTT_STREAM_SETTINGS.SSL_KEYSTORE_ALGO, "SunX509")
+
+    val trustStoreFile = settings.get(MQTT_STREAM_SETTINGS.SSL_TRUSTSTORE_FILE)
+    /*
+     * - JKS      Java KeyStore
+     * - JCEKS    Java Cryptography Extension KeyStore
+     * - PKCS #12 Public-Key Cryptography Standards #12 KeyStore
+     * - BKS      Bouncy Castle KeyStore
+     * - BKS-V1   Older and incompatible version of Bouncy Castle KeyStore
+     */
+    val trustStoreType = settings
+      .getOrElse(MQTT_STREAM_SETTINGS.SSL_TRUSTSTORE_TYPE, "JKS")
+
+    val trustStorePass = settings
+      .getOrElse(MQTT_STREAM_SETTINGS.SSL_TRUSTSTORE_PASS, "")
+
+    val trustStoreAlgo = settings
+      .getOrElse(MQTT_STREAM_SETTINGS.SSL_TRUSTSTORE_ALGO, "SunX509")
+
+    val cipherSuites = settings
+      .getOrElse(MQTT_STREAM_SETTINGS.SSL_CIPHER_SUITES, "")
+      .split(",").map(_.trim).toList
+
+    val sslOptions = if (trustStoreFile.isEmpty) {
+      SslOptions.Builder.buildStoreOptions(
+        tlsVersion,
+        keyStoreFile,
+        keyStoreType,
+        keyStorePass,
+        keyStoreAlgo,
+        cipherSuites
+      )
+    }
+    else {
+      SslOptions.Builder.buildStoreOptions(
+        tlsVersion,
+        keyStoreFile,
+        keyStoreType,
+        keyStorePass,
+        keyStoreAlgo,
+        trustStoreFile.get,
+        trustStoreType,
+        trustStorePass,
+        trustStoreAlgo,
+        cipherSuites)
+
+    }
+
+    sslOptions.getSslSocketFactory
+
+  }
 }

@@ -37,4 +37,17 @@ object MQTT_STREAM_SETTINGS {
   val USERNAME       = "username"
   val VERSION        = "version"
 
+  /* SSL SUPPORT */
+
+  val SSL_CIPHER_SUITES   = "ssl.cipher.suites"
+  val SSL_KEYSTORE_ALGO   = "ssl.keystore.algorithm"
+  val SSL_KEYSTORE_FILE   = "ssl.keystore.file"
+  val SSL_KEYSTORE_PASS   = "ssl.keystore.password"
+  val SSL_KEYSTORE_TYPE   = "ssl.keystore.type"
+  val SSL_PROTOCOL        = "ssl.protocol"
+  val SSL_TRUSTSTORE_ALGO = "ssl.truststore.algorithm"
+  val SSL_TRUSTSTORE_FILE = "ssl.truststore.file"
+  val SSL_TRUSTSTORE_PASS = "ssl.truststore.password"
+  val SSL_TRUSTSTORE_TYPE = "ssl.truststore.type"
+
 }
