@@ -19,6 +19,7 @@ package de.kp.works.stream.sql.mqtt.paho
  */
 
 import de.kp.works.stream.sql.Logging
+import de.kp.works.stream.sql.mqtt.MQTT_STREAM_SETTINGS
 import org.apache.spark.sql.sources.v2.DataSourceOptions
 import org.eclipse.paho.client.mqttv3.persist.{MemoryPersistence, MqttDefaultFilePersistence}
 import org.eclipse.paho.client.mqttv3.{MqttClient, MqttClientPersistence, MqttConnectOptions}
@@ -27,37 +28,41 @@ import scala.collection.JavaConverters._
 
 class PahoOptions(options: DataSourceOptions) extends Logging {
 
-  private val BROKER_URL  = "broker.url"
-  private val CLIENT_ID   = "client.id"
-  private val PERSISTENCE = "persistence"
-
   private val settings:Map[String,String] = options.asMap.asScala.toMap
 
   def getBrokerUrl:String = {
 
-    if (!settings.contains(BROKER_URL))
-      throw new Exception(s"No broker.url provided. Please specify in options.")
+    if (!settings.contains(MQTT_STREAM_SETTINGS.BROKER_URL))
+      throw new Exception(s"[PahoOptions] No `broker.url` provided. Please specify in options.")
 
-    settings(BROKER_URL)
+    settings(MQTT_STREAM_SETTINGS.BROKER_URL)
 
   }
 
   def getClientId:String = {
 
-    if (!settings.contains(CLIENT_ID)) {
-      log.warn("A random value is picked up for the `client.id`. Recovering from failure is not supported.")
+    if (!settings.contains(MQTT_STREAM_SETTINGS.CLIENT_ID)) {
+      log.warn("[PahoOptions] A random value is picked up for the `client.id`. Recovering from failure is not supported.")
       MqttClient.generateClientId()
 
     } else
-      settings(CLIENT_ID)
+      settings(MQTT_STREAM_SETTINGS.CLIENT_ID)
 
   }
 
-  def getMqttOptions:MqttConnectOptions = ???
+  def getMqttOptions:MqttConnectOptions = {
+
+    val mqttConnectOptions = new MqttConnectOptions
+
+    // TODO
+
+    mqttConnectOptions
+
+  }
 
   def getPersistence:MqttClientPersistence = {
 
-    settings.get(PERSISTENCE) match {
+    settings.get(MQTT_STREAM_SETTINGS.PERSISTENCE) match {
       case Some("file") =>
         new MqttDefaultFilePersistence()
       case Some("memory") =>
@@ -68,8 +73,21 @@ class PahoOptions(options: DataSourceOptions) extends Logging {
 
   }
 
-  def getQos:Int = ???
+  def getQos:Int = {
+    settings.getOrElse(MQTT_STREAM_SETTINGS.QOS, "1").toInt
+  }
 
-  def getTopics:Array[String] = ???
+  def getTopics:Array[String] = {
+
+    if (!settings.contains(MQTT_STREAM_SETTINGS.TOPICS)) {
+      throw new Exception(s"[PahoOptions] No `topics` provided. Please specify in options.")
+    }
+    /*
+     * Comma-separated list of topics
+     */
+    settings(MQTT_STREAM_SETTINGS.TOPICS)
+      .split(",").map(_.trim)
+
+  }
 
 }

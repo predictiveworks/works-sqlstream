@@ -19,7 +19,48 @@ package de.kp.works.stream.sql.mqtt
  */
 
 import org.eclipse.paho.client.mqttv3.MqttMessage
+import java.nio.charset.Charset
 
 class MqttEvent(val topic:String, message:MqttMessage) {
+  /*
+   * The message identifier
+   */
+  val id: Int = message.getId
+  /*
+   * The timestamp in milli seconds the message arrived
+   */
+  val timestamp: Long = System.currentTimeMillis()
+  /*
+   * The quality of service of the message
+   */
+  val qos: Int = message.getQos
+  /*
+   * Indicates whether or not this message might be a
+   * duplicate of one which has already been received.
+   */
+  val duplicate: Boolean = message.isDuplicate
+  /*
+   * Indicates whether or not this message should be/was
+   * retained by the server.
+   */
+  val retained: Boolean = message.isRetained
+  /*
+   * The payload of this message
+   */
+  val payload: Array[Byte] = message.getPayload
+
+  def getValues:Seq[Any] = Seq(id, timestamp, topic, qos, duplicate, retained, payload)
+
+  override def toString: String = {
+    s"""MQTTEvent.
+       |EventId: ${this.id}
+       |Timestamp: ${this.timestamp}
+       |Topic: ${this.topic}
+       |QoS: ${this.qos}
+       |isDuplicate: ${this.duplicate}
+       |isRetained: ${this.retained}
+       |Payload as string: ${new String(this.payload, Charset.defaultCharset())}
+     """.stripMargin
+  }
 
 }
