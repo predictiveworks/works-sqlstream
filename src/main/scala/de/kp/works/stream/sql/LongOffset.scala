@@ -1,4 +1,5 @@
-package de.kp.works.stream.sql.mqtt
+package de.kp.works.stream.sql
+
 /*
  * Copyright (c) 2020 - 2021 Dr. Krusche & Partner PartG. All rights reserved.
  *
@@ -18,8 +19,7 @@ package de.kp.works.stream.sql.mqtt
  *
  */
 
-import org.apache.spark.sql.execution.streaming.Offset
-import org.apache.spark.sql.execution.streaming.SerializedOffset
+import org.apache.spark.sql.execution.streaming.{Offset, SerializedOffset}
 import org.apache.spark.sql.sources.v2.reader.streaming.{Offset => OffsetV2}
 
 /**

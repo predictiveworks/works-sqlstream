@@ -18,8 +18,8 @@ package de.kp.works.stream.sql.mqtt.paho
  *
  */
 
-import de.kp.works.stream.sql.Logging
-import de.kp.works.stream.sql.mqtt.{LocalEventStore, LongOffset, MqttEvent, MqttSchema}
+import de.kp.works.stream.sql.{Logging, LongOffset}
+import de.kp.works.stream.sql.mqtt.{LocalEventStore, MqttEvent, MqttSchema}
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.sources.v2.reader.{InputPartition, InputPartitionReader}
