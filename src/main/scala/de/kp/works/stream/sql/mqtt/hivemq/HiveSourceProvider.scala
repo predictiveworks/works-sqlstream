@@ -1,4 +1,4 @@
-package de.kp.works.stream.sql.mqtt.paho
+package de.kp.works.stream.sql.mqtt.hivemq
 /*
  * Copyright (c) 2020 - 2021 Dr. Krusche & Partner PartG. All rights reserved.
  *
@@ -26,7 +26,7 @@ import org.apache.spark.sql.types.StructType
 
 import java.util.Optional
 
-class PahoSourceProvider extends DataSourceV2
+class HiveSourceProvider extends DataSourceV2
   with MicroBatchReadSupport with DataSourceRegister with Logging {
 
   override def createMicroBatchReader(
@@ -41,13 +41,13 @@ class PahoSourceProvider extends DataSourceV2
     }
     /*
      * Transform options provided with the respective
-     * datasource into a `Paho` specific representation
+     * datasource into a `Hive` specific representation
      */
-    val pahoOptions = new PahoOptions(options)
-    new PahoSource(pahoOptions)
+    val hiveOptions = new HiveOptions(options)
+    new HiveSource(hiveOptions)
 
   }
 
-  override def shortName(): String = "paho"
+  override def shortName(): String = "hive"
 
 }

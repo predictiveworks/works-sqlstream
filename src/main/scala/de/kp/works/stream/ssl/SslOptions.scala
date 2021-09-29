@@ -234,6 +234,14 @@ class SslOptions(
 
   }
 
+  def getHostnameVerifier: HostnameVerifier = {
+    /*
+     * Use https hostname verification.
+     */
+    null
+
+  }
+
   def getSslSocketFactory: SSLSocketFactory = {
     
 		Security.addProvider(new BouncyCastleProvider())

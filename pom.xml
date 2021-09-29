@@ -25,6 +25,7 @@
         <hivemq.version>1.2.0</hivemq.version>
         <okhttp.version>3.14.4</okhttp.version>
         <paho.version>1.2.2</paho.version>
+        <rocksdb.version>6.6.4</rocksdb.version>
         <!--
         Leveraging this project in a Google CDAP environment
         requires this version of Apache Spark
@@ -80,6 +81,14 @@
             <groupId>com.squareup.okhttp3</groupId>
             <artifactId>okhttp-sse</artifactId>
             <version>${okhttp.version}</version>
+        </dependency>
+
+        <!-- ROCKSDB
+        -->
+        <dependency>
+            <groupId>org.rocksdb</groupId>
+            <artifactId>rocksdbjni</artifactId>
+            <version>${rocksdb.version}</version>
         </dependency>
 
         <!-- SPARK SQL

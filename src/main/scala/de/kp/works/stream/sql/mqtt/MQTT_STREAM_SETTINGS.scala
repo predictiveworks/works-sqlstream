@@ -21,16 +21,19 @@ package de.kp.works.stream.sql.mqtt
 object MQTT_STREAM_SETTINGS {
 
   val FORMAT_DITTO = "de.kp.works.stream.sql.mqtt.ditto.DittoSourceProvider"
+  val FORMAT_HIVE  = "de.kp.works.stream.sql.mqtt.hive.HiveSourceProvider"
   val FORMAT_PAHO  = "de.kp.works.stream.sql.mqtt.paho.PahoSourceProvider"
 
   val AUTO_RECONNECT = "auto.reconnect"
   val BROKER_URL     = "broker.url"
   val CLEAN_SESSION  = "clean.session"
   val CLIENT_ID      = "client.id"
+  val HOST           = "host"
   val KEEP_ALIVE     = "keep.alive"
   val MAX_INFLIGHT   = "max.inflight"
   val PASSWORD       = "password"
   val PERSISTENCE    = "persistence"
+  val PORT           = "port"
   val QOS            = "qos"
   val TIMEOUT        = "timeout"
   val TOPICS         = "topics"

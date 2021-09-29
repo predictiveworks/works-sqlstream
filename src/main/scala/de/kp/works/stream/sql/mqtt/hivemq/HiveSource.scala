@@ -1,4 +1,4 @@
-package de.kp.works.stream.sql.mqtt.paho
+package de.kp.works.stream.sql.mqtt.hivemq
 /*
  * Copyright (c) 2020 - 2021 Dr. Krusche & Partner PartG. All rights reserved.
  *
@@ -25,7 +25,7 @@ import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.sources.v2.reader.{InputPartition, InputPartitionReader}
 import org.apache.spark.sql.sources.v2.reader.streaming.{MicroBatchReader, Offset}
 import org.apache.spark.sql.types.StructType
-import org.eclipse.paho.client.mqttv3._
+import org.eclipse.paho.client.mqttv3.MqttMessage
 
 import java.util
 import java.util.Optional
@@ -34,7 +34,7 @@ import scala.collection.JavaConverters._
 import scala.collection.concurrent.TrieMap
 import scala.collection.mutable.ListBuffer
 
-class PahoSource(options: PahoOptions)
+class HiveSource(options: HiveOptions)
   extends MicroBatchReader with Logging {
 
   private var startOffset: Offset = _
@@ -43,7 +43,7 @@ class PahoSource(options: PahoOptions)
   private val events = new TrieMap[Long, MqttEvent]
 
   private val persistence = options.getPersistence
-  private val store = new LocalEventStore(persistence)
+  private val store = new HiveEventStore(persistence)
 
   @GuardedBy("this")
   private var currentOffset: LongOffset = LongOffset(-1L)
@@ -51,15 +51,15 @@ class PahoSource(options: PahoOptions)
   @GuardedBy("this")
   private var lastOffsetCommitted: LongOffset = LongOffset(-1L)
 
-  private var client:MqttClient = _
-  buildMqttClient()
+  private var client:HiveClient = _
+  buildHiveClient()
 
   override def commit(offset: Offset): Unit = synchronized {
 
     val newOffset = LongOffset.convert(offset)
     if (newOffset.isEmpty) {
 
-      val message = s"[PahoSource] Method `commit` received an offset (${offset.toString}) that did not originate from this source.)"
+      val message = s"[HiveSource] Method `commit` received an offset (${offset.toString}) that did not originate from this source.)"
       sys.error(message)
 
     }
@@ -67,7 +67,7 @@ class PahoSource(options: PahoOptions)
     val offsetDiff = (newOffset.get.offset - lastOffsetCommitted.offset).toInt
     if (offsetDiff < 0) {
 
-      val message = s"[PahoSource] Offsets committed are out of order: $lastOffsetCommitted followed by $offset.toString"
+      val message = s"[HiveSource] Offsets committed are out of order: $lastOffsetCommitted followed by $offset.toString"
       sys.error(message)
 
     }
@@ -158,29 +158,37 @@ class PahoSource(options: PahoOptions)
 
   }
 
-  /**
-   * This method stops this streaming source
-   */
   override def stop(): Unit = synchronized {
-
     client.disconnect()
-    persistence.close()
-
-    client.close()
-
   }
 
-  private def buildMqttClient(): Unit = {
+  private def buildHiveClient():Unit = {
 
-    val brokerUrl = options.getBrokerUrl
-    val clientId  = options.getClientId
+    client = HiveClient.build(options)
 
-    client = new MqttClient(brokerUrl, clientId, persistence)
-    val callback = new MqttCallbackExtended() {
+    val expose = new HiveExpose() {
 
-      override def messageArrived(topic_ : String, message: MqttMessage): Unit = synchronized {
+      override def messageArrived(
+        topic:String,
+        payload: Array[Byte],
+        qos: Int,
+        duplicate: Boolean,
+        retained: Boolean): Unit =  synchronized {
+        /*
+         * Harmonize with Paho [MqttMessage]
+         */
+        val message = new MqttMessage()
 
-        val mqttEvent = new MqttEvent(topic_, message)
+        /* Random message identifier */
+        val id = math.abs(scala.util.Random.nextInt)
+        message.setId(id)
+
+        message.setQos(qos)
+        message.setPayload(payload)
+
+        message.setRetained(retained)
+
+        val mqttEvent = new MqttEvent(topic, message)
 
         val offset = currentOffset.offset + 1L
         events.put(offset, mqttEvent)
@@ -188,35 +196,17 @@ class PahoSource(options: PahoOptions)
         store.store(offset, mqttEvent)
 
         currentOffset = LongOffset(offset)
-        log.trace(s"Message arrived, $topic_ $mqttEvent")
+        log.trace(s"Message arrived, $topic $mqttEvent")
 
       }
 
-      override def deliveryComplete(token: IMqttDeliveryToken): Unit = {
-        /* Do nothing */
-      }
-
-      override def connectionLost(cause: Throwable): Unit = {
-        log.warn("Connection to mqtt server lost.", cause)
-      }
-
-      override def connectComplete(reconnect: Boolean, serverURI: String): Unit = {
-        log.info(s"Connect complete $serverURI. Is it a reconnect?: $reconnect")
-      }
     }
-    /* Register callback */
-    client.setCallback(callback)
 
-    /* Assign Mqtt options */
-    val mqttOptions = options.getMqttOptions
-    client.connect(mqttOptions)
+    client.setExpose(expose)
+    client.connect()
 
-    /* Subscribe to Mqtt topics */
-    val qos    = options.getQos
-    val topics = options.getTopics
-
-    val quality = topics.map(_ => qos)
-    client.subscribe(topics, quality)
+    if (client.isConnected) client.listen(options.getTopics)
 
   }
+
 }

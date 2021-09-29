@@ -1,4 +1,4 @@
-package de.kp.works.stream.sql.mqtt
+package de.kp.works.stream.sql.mqtt.paho
 /*
  * Copyright (c) 2020 - 2021 Dr. Krusche & Partner PartG. All rights reserved.
  *
@@ -19,13 +19,11 @@ package de.kp.works.stream.sql.mqtt
  */
 
 import de.kp.works.stream.sql.Logging
+import org.eclipse.paho.client.mqttv3._
 
 import java.io._
 import java.util
-
-import org.eclipse.paho.client.mqttv3._
 import scala.util.Try
-
 
 /** An event store for MQTT sql streaming. */
 trait EventStore {
@@ -112,7 +110,6 @@ object JavaSerializer {
   def getInstance(): JavaSerializer = instance
 
 }
-
 
 /**
  * An event store to persist MQTT events received. This is not

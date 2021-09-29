@@ -148,7 +148,7 @@ class PahoOptions(options: DataSourceOptions) extends Logging {
       case Some("memory") =>
         new MemoryPersistence()
 
-      case None => new MqttDefaultFilePersistence()
+      case _ => new MqttDefaultFilePersistence()
     }
 
   }
