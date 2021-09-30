@@ -157,6 +157,9 @@ class PahoOptions(options: DataSourceOptions) extends Logging {
     settings.getOrElse(MQTT_STREAM_SETTINGS.QOS, "1").toInt
   }
 
+  def getSchemaType:String =
+    settings.getOrElse(MQTT_STREAM_SETTINGS.SCHEMA_TYPE, "plain")
+
   def getTopics:Array[String] = {
 
     if (!settings.contains(MQTT_STREAM_SETTINGS.TOPICS)) {

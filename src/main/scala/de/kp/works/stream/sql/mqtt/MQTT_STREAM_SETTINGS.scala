@@ -24,6 +24,8 @@ object MQTT_STREAM_SETTINGS {
   val FORMAT_HIVE  = "de.kp.works.stream.sql.mqtt.hive.HiveSourceProvider"
   val FORMAT_PAHO  = "de.kp.works.stream.sql.mqtt.paho.PahoSourceProvider"
 
+  /* CLIENT SUPPORT */
+
   val AUTO_RECONNECT = "auto.reconnect"
   val BROKER_URL     = "broker.url"
   val CLEAN_SESSION  = "clean.session"
@@ -39,6 +41,14 @@ object MQTT_STREAM_SETTINGS {
   val TOPICS         = "topics"
   val USERNAME       = "username"
   val VERSION        = "version"
+
+  /* SCHEMA SUPPORT */
+
+  /*
+   * The schema type controls the output schema
+   * assigned to the incoming MQTT stream
+   */
+  val SCHEMA_TYPE = "schema.type"
 
   /* SSL SUPPORT */
 

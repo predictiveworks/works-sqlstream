@@ -149,7 +149,8 @@ class PahoSource(options: PahoOptions)
 
   }
 
-  override def readSchema(): StructType = MqttSchema.getSchema
+  override def readSchema(): StructType =
+    MqttSchema.getSchema(options.getSchemaType)
 
   override def setOffsetRange(start: Optional[Offset], end: Optional[Offset]): Unit = synchronized {
 

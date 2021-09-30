@@ -22,7 +22,22 @@ import org.apache.spark.sql.types._
 
 object MqttSchema {
 
-  def getSchema:StructType = {
+  def getSchema(schemaType:String):StructType = {
+
+    schemaType.toLowerCase match {
+      case "plain" => getPlainSchema
+      case _ =>
+        throw new Exception(s"Schema type `$schemaType` is not supported.")
+    }
+
+  }
+  /**
+   * This method build the default (or plain) schema
+   * for the incoming MQTT stream. It is independent
+   * of the selected semantic source and derived from
+   * the field variables provided by the MQTT client(s).
+   */
+  private def getPlainSchema:StructType = {
 
     val fields:Array[StructField] = Array(
       /*
