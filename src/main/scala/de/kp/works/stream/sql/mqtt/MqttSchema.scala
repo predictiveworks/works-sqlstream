@@ -32,7 +32,7 @@ object MqttSchema {
 
   }
   /**
-   * This method build the default (or plain) schema
+   * This method builds the default (or plain) schema
    * for the incoming MQTT stream. It is independent
    * of the selected semantic source and derived from
    * the field variables provided by the MQTT client(s).

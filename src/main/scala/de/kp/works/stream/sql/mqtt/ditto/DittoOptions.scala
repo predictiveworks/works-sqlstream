@@ -19,7 +19,159 @@ package de.kp.works.stream.sql.mqtt.ditto
  */
 
 import org.apache.spark.sql.sources.v2.DataSourceOptions
+import org.eclipse.ditto.model.things.ThingId
+import org.rocksdb.RocksDB
+
+import scala.collection.JavaConverters._
 
 class DittoOptions(options: DataSourceOptions) {
+
+  private val settings:Map[String,String] = options.asMap.asScala.toMap
+
+  def getEndpoint:String = {
+
+    if (settings.contains(DITTO_STREAM_SETTINGS.DITTO_ENDPOINT))
+      settings(DITTO_STREAM_SETTINGS.DITTO_ENDPOINT)
+
+    else
+      throw new Exception(s"No endpoint path specified.")
+
+  }
+
+  /**
+   * Check whether a certain feature identifier is provided to
+   * restrict events to a certain feature
+   */
+  def getFeatureId:String = {
+
+    if (settings.contains(DITTO_STREAM_SETTINGS.DITTO_FEATURE_ID))
+      settings(DITTO_STREAM_SETTINGS.DITTO_FEATURE_ID)
+
+    else null
+
+  }
+
+  def getFeatureChangeHandler:String =
+    DITTO_STREAM_SETTINGS.DITTO_FEATURE_CHANGES_HANDLER
+
+  def getFeaturesChangeHandler:String =
+    DITTO_STREAM_SETTINGS.DITTO_FEATURES_CHANGES_HANDLER
+
+  def getLiveMessagesHandler:String =
+    DITTO_STREAM_SETTINGS.DITTO_LIVE_MESSAGES
+
+  def getOAuthClientId:Option[String] =
+    settings.get(DITTO_STREAM_SETTINGS.DITTO_OAUTH_CLIENT_ID)
+
+  def getOAuthClientSecret:Option[String] =
+    settings.get(DITTO_STREAM_SETTINGS.DITTO_OAUTH_CLIENT_SECRET)
+
+  def getOAuthScopes:Option[String] =
+    settings.get(DITTO_STREAM_SETTINGS.DITTO_OAUTH_SCOPES)
+
+  def getOAuthTokenEndpoint:Option[String] =
+    settings.get(DITTO_STREAM_SETTINGS.DITTO_OAUTH_TOKEN_ENDPOINT)
+
+  def getPersistence:RocksDB = {
+
+    val path = settings.getOrElse(DITTO_STREAM_SETTINGS.PERSISTENCE, "")
+    if (path.isEmpty)
+      throw new Exception(s"No persistence path specified.")
+
+    DittoPersistence.getOrCreate(path)
+
+  }
+
+  def getProxy:(Option[String], Option[String]) = {
+
+    val proxyHost =
+      settings.get(DITTO_STREAM_SETTINGS.DITTO_PROXY_HOST)
+
+    val proxyPort =
+      settings.get(DITTO_STREAM_SETTINGS.DITTO_PROXY_PORT)
+
+    (proxyHost, proxyPort)
+
+  }
+
+  def getSchemaType:String =
+    settings.getOrElse(DITTO_STREAM_SETTINGS.SCHEMA_TYPE, "plain")
+
+  def getTrustStore:(Option[String], Option[String]) = {
+
+    val location =
+      settings.get(DITTO_STREAM_SETTINGS.DITTO_TRUSTSTORE_LOCATION)
+
+    val password =
+      settings.get(DITTO_STREAM_SETTINGS.DITTO_TRUSTSTORE_PASSWORD)
+
+    (location, password)
+
+  }
+
+  /* User authentication */
+
+  def getUserAndPass:(Option[String], Option[String]) = {
+
+    val username =
+      settings.get(DITTO_STREAM_SETTINGS.DITTO_USER)
+
+    val password =
+      settings.get(DITTO_STREAM_SETTINGS.DITTO_PASS)
+
+    (username, password)
+
+  }
+
+  def getThingsChangeHandler:String =
+    DITTO_STREAM_SETTINGS.DITTO_THING_CHANGES_HANDLER
+  /**
+   * Check whether a certain thing identifier is provided to
+   * restrict events to a certain thing
+   */
+  def getThingId:ThingId = {
+
+    if (settings.contains(DITTO_STREAM_SETTINGS.DITTO_THING_ID))
+      ThingId.of(settings(DITTO_STREAM_SETTINGS.DITTO_THING_ID))
+
+    else null
+
+  }
+
+  def isFeatureChanges:Boolean = {
+
+    val changes = settings.get(DITTO_STREAM_SETTINGS.DITTO_FEATURE_CHANGES)
+    if (changes.isEmpty) return false
+
+    if (changes.get == "true") true else false
+
+  }
+
+  def isFeaturesChanges:Boolean = {
+
+    val changes = settings.get(DITTO_STREAM_SETTINGS.DITTO_FEATURES_CHANGES)
+    if (changes.isEmpty) return false
+
+    if (changes.get == "true") true else false
+
+  }
+
+  def isLiveMessages:Boolean = {
+
+    val changes = settings.get(DITTO_STREAM_SETTINGS.DITTO_LIVE_MESSAGES)
+    if (changes.isEmpty) return false
+
+    if (changes.get == "true") true else false
+
+  }
+
+  def isThingChanges:Boolean = {
+
+    val changes = settings.get(DITTO_STREAM_SETTINGS.DITTO_THING_CHANGES)
+    if (changes.isEmpty) return false
+
+    if (changes.get == "true") true else false
+
+  }
 
 }

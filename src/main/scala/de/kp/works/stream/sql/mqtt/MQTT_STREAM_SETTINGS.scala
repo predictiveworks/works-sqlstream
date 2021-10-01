@@ -20,7 +20,6 @@ package de.kp.works.stream.sql.mqtt
 
 object MQTT_STREAM_SETTINGS {
 
-  val FORMAT_DITTO = "de.kp.works.stream.sql.mqtt.ditto.DittoSourceProvider"
   val FORMAT_HIVE  = "de.kp.works.stream.sql.mqtt.hive.HiveSourceProvider"
   val FORMAT_PAHO  = "de.kp.works.stream.sql.mqtt.paho.PahoSourceProvider"
 
