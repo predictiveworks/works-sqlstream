@@ -18,14 +18,4 @@ package de.kp.works.stream.sql.mqtt.ditto
  *
  */
 
-case class DittoMessage(`type`:String, payload:String) {
-
-  def getValues:Seq[Any] = {
-
-    val id = "ditto-" + java.util.UUID.randomUUID.toString
-    Seq(id, `type`, payload)
-
-  }
-
-}
-
+case class DittoMessage(`type`:String, payload:String)

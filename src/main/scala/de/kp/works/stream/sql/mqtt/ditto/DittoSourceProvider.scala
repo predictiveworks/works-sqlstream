@@ -35,7 +35,11 @@ class DittoSourceProvider extends DataSourceV2
      options: DataSourceOptions): MicroBatchReader = {
 
     def e(s: String) = new IllegalArgumentException(s)
-
+    /*
+     * The schema representation of a certain [DittoMessage]
+     * is specified via the provided `schema.type` in the
+     * configuration of the streaming source.
+     */
     if (schema.isPresent) {
       throw e("The mqtt source does not support a user-specified schema.")
     }

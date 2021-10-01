@@ -77,7 +77,6 @@ class DittoClient(options:DittoOptions) extends Logging {
   }
 
   def connect() {
-     
     /*
      * Build Ditto web socket client
      */

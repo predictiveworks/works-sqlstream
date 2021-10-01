@@ -117,10 +117,12 @@ class DittoSource(options: DittoOptions)
      * Note, the order of values must be compliant to the defined
      * schema
      */
+    val schemaType = options.getSchemaType
     (0 until numPartitions).map{i =>
 
       val slice = slices(i)
       new InputPartition[InternalRow] {
+
         override def createPartitionReader(): InputPartitionReader[InternalRow] =
           new InputPartitionReader[InternalRow] {
             private var currentIdx = -1
@@ -132,10 +134,11 @@ class DittoSource(options: DittoOptions)
 
             override def get(): InternalRow = {
               /*
-               * Schema compliant value representation
-               * of a [DittoMessage].
+               * [DittoUtil] transforms the [DittoMessage] into
+               * a schema compliant sequence of values
                */
-              InternalRow(slice(currentIdx).getValues)
+              val values = DittoUtil.getValues(slice(currentIdx), schemaType)
+              InternalRow(values)
             }
 
             override def close(): Unit = {/* Do nothing */}

@@ -18,17 +18,48 @@ package de.kp.works.stream.sql.mqtt.ditto
  *
  */
 
-import org.apache.spark.sql.types.{BinaryType, BooleanType, IntegerType, LongType, StringType, StructField, StructType}
+import org.apache.spark.sql.types._
 
 object DittoSchema {
-
-  def getSchema(schemaType: String): StructType = {
+  /*
+   * This method determines the schema that is used
+   * to represent Eclipse Ditto messages.
+   */
+  def getSchema(schemaType:String): StructType = {
 
     schemaType.toLowerCase match {
-      case "plain" => getPlainSchema
+      case "feature" =>
+        getFeatureSchema
+      case "features" =>
+        getFeaturesSchema
+      case "message" =>
+        getMessageSchema
+      case "plain" =>
+        getPlainSchema
+      case "thing" =>
+        getThingSchema
       case _ =>
         throw new Exception(s"Schema type `$schemaType` is not supported.")
     }
+
+  }
+
+  private def getFeatureSchema:StructType = ???
+
+  private def getFeaturesSchema:StructType = ???
+
+  private def getMessageSchema:StructType = {
+
+    val fields:Array[StructField] = Array(
+      StructField("id",        StringType, nullable = false),
+      StructField("timestamp", LongType, nullable = false),
+      StructField("name",      StringType, nullable = true),
+      StructField("namespace", StringType, nullable = true),
+      StructField("subject",   StringType, nullable = true),
+      StructField("payload",   StringType, nullable = true)
+    )
+
+    StructType(fields)
 
   }
 
@@ -39,22 +70,15 @@ object DittoSchema {
   private def getPlainSchema: StructType = {
 
     val fields:Array[StructField] = Array(
-      /*
-       * The message identifier
-       */
-      StructField("id", StringType, nullable = false),
-      /*
-       * The Ditto message type
-       */
-      StructField("type", StringType, nullable = false),
-      /*
-       * The payload of this message
-       */
+      StructField("id",      StringType, nullable = false),
+      StructField("type",    StringType, nullable = false),
       StructField("payload", StringType, nullable = true)
     )
 
     StructType(fields)
 
   }
+
+  private def getThingSchema:StructType = ???
 
 }

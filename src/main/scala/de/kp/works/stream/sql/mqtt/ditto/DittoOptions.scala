@@ -94,8 +94,41 @@ class DittoOptions(options: DataSourceOptions) {
 
   }
 
-  def getSchemaType:String =
-    settings.getOrElse(DITTO_STREAM_SETTINGS.SCHEMA_TYPE, "plain")
+  def getSchemaType:String = {
+
+    var schemaType = settings.getOrElse(DITTO_STREAM_SETTINGS.SCHEMA_TYPE, "plain")
+    /*
+     * Selecting a schema type makes sense
+     * if a subscription is made to a single
+     * topic or message
+     */
+    var numSubscriptions = 0
+    if (isThingChanges) {
+      numSubscriptions += 1
+      schemaType = "thing"
+    }
+
+    if (isFeaturesChanges) {
+      numSubscriptions += 1
+      schemaType = "features"
+    }
+
+    if (isFeatureChanges) {
+      numSubscriptions += 1
+      schemaType = "feature"
+    }
+
+    if (isLiveMessages) {
+      numSubscriptions += 1
+      schemaType = "message"
+    }
+
+    if (numSubscriptions > 1)
+      schemaType = "plain"
+
+    schemaType
+
+  }
 
   def getTrustStore:(Option[String], Option[String]) = {
 
