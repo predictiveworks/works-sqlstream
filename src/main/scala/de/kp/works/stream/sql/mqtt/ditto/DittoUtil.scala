@@ -22,7 +22,10 @@ import com.google.gson.JsonParser
  */
 
 object DittoUtil {
-
+  /**
+   * This method transforms a certain [DittoMessage] into
+   * a sequence of schema compliant values
+   */
   def getValues(message:DittoMessage, schemaType:String):Seq[Any] = {
 
     schemaType.toLowerCase match {
@@ -41,11 +44,27 @@ object DittoUtil {
     }
 
   }
-
+  /**
+   * The value representation of a certain feature change:
+   *
+   * - id
+   * - timestamp
+   * - feature_id
+   * - properties (serialized
+   */
   def getFeatureValues(message:DittoMessage):Seq[Any] = {
 
     val id = "ditto-" + java.util.UUID.randomUUID.toString
-    ???
+
+    val json = JsonParser.parseString(message.payload)
+      .getAsJsonObject
+
+    val timestamp = json.get("timestamp").getAsLong
+    val feature_id = json.get("id").getAsString
+
+    val properties = json.get("properties").toString
+    Seq(id, timestamp, feature_id, properties)
+
   }
 
   def getFeaturesValues(message:DittoMessage):Seq[Any] = {
@@ -54,6 +73,16 @@ object DittoUtil {
     ???
   }
 
+  /**
+   * The value representation of a certain live message:
+   *
+   * - id
+   * - timestamp
+   * - name
+   * - namespace
+   * - subject
+   * - payload
+   */
   def getMessageValues(message:DittoMessage):Seq[Any] = {
 
     val id = "ditto-" + java.util.UUID.randomUUID.toString
@@ -71,7 +100,14 @@ object DittoUtil {
     Seq(id, timestamp, name, namespace, subject, payload)
 
   }
-
+  /**
+   * The default and generic value representation of
+   * multiple changes and live messages
+   *
+   * - id
+   * - type
+   * - payload
+   */
   def getPlainValues(message:DittoMessage):Seq[Any] = {
 
     val id = "ditto-" + java.util.UUID.randomUUID.toString

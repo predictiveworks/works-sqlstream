@@ -143,22 +143,20 @@ object DittoGson {
     val ts = getTime(change)
     gson.addProperty("timestamp", ts)
 
-    val feature = change.getFeature   
-    
+    val feature = change.getFeature
+
     /* Feature identifier */
-    val gFeature = new JsonObject()      
-    gFeature.addProperty("id", feature.getId)
+    gson.addProperty("id", feature.getId)
      
     /* Properties */
     if (feature.getProperties.isPresent) {
       
       val properties = properties2Gson(feature.getProperties.get)
-      gFeature.add("properties", properties)
+      gson.add("properties", properties)
       
     } else
-      gFeature.add("properties", new JsonArray())
+      gson.add("properties", new JsonArray())
       
-    gson.add("feature", gFeature)
     gson.toString
     
   }

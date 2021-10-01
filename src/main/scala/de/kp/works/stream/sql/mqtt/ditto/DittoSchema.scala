@@ -44,7 +44,18 @@ object DittoSchema {
 
   }
 
-  private def getFeatureSchema:StructType = ???
+  private def getFeatureSchema:StructType = {
+
+    val fields:Array[StructField] = Array(
+      StructField("id",         StringType, nullable = false),
+      StructField("timestamp",  LongType, nullable = false),
+      StructField("feature_id", StringType, nullable = true),
+      StructField("properties", StringType, nullable = true)
+    )
+
+    StructType(fields)
+
+  }
 
   private def getFeaturesSchema:StructType = ???
 
