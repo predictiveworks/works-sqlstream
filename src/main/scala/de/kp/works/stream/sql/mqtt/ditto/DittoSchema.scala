@@ -18,7 +18,7 @@ package de.kp.works.stream.sql.mqtt.ditto
  *
  */
 
-import org.apache.spark.sql.types.StructType
+import org.apache.spark.sql.types.{BinaryType, BooleanType, IntegerType, LongType, StringType, StructField, StructType}
 
 object DittoSchema {
 
@@ -36,6 +36,25 @@ object DittoSchema {
    * This method builds the default (or plain) schema
    * for the incoming Ditto message stream.
    */
-  private def getPlainSchema: StructType = ???
+  private def getPlainSchema: StructType = {
+
+    val fields:Array[StructField] = Array(
+      /*
+       * The message identifier
+       */
+      StructField("id", StringType, nullable = false),
+      /*
+       * The Ditto message type
+       */
+      StructField("type", StringType, nullable = false),
+      /*
+       * The payload of this message
+       */
+      StructField("payload", StringType, nullable = true)
+    )
+
+    StructType(fields)
+
+  }
 
 }
