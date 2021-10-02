@@ -19,6 +19,7 @@ package de.kp.works.stream.sql.sse
  */
 
 import de.kp.works.stream.sql.Logging
+import de.kp.works.stream.ssl.SslOptions
 import org.apache.spark.sql.sources.v2.DataSourceOptions
 import org.rocksdb.RocksDB
 
@@ -27,6 +28,20 @@ import scala.collection.JavaConverters.mapAsScalaMapConverter
 class SseOptions(options: DataSourceOptions) extends Logging {
 
   private val settings:Map[String,String] = options.asMap.asScala.toMap
+
+  def isSsl:Boolean = {
+
+    var ssl:Boolean = false
+    settings.keySet.foreach(key => {
+      if (key.startsWith("ssl.")) ssl = true
+    })
+
+    ssl
+
+  }
+
+  def getOAuthToken:Option[String] =
+    settings.get(SSE_STREAM_SETTINGS.AUTH_TOKEN)
 
   def getPersistence:RocksDB = {
 
@@ -40,5 +55,90 @@ class SseOptions(options: DataSourceOptions) extends Logging {
 
   def getSchemaType:String =
     settings.getOrElse(SSE_STREAM_SETTINGS.SCHEMA_TYPE, "plain")
+
+  def getServerUrl:String = {
+    val url = settings.get(SSE_STREAM_SETTINGS.SERVER_URL)
+    if (url.isEmpty)
+      throw new Exception(s"No server url specified.")
+
+    url.get
+  }
+
+  def getSslOptions:SslOptions = {
+
+    val tlsVersion = settings
+      .getOrElse(SSE_STREAM_SETTINGS.SSL_PROTOCOL, "TLS")
+
+    /*
+     * The keystore file must be defined
+     */
+    val keyStoreFile = settings
+      .getOrElse(SSE_STREAM_SETTINGS.SSL_KEYSTORE_FILE,
+        throw new Exception(s"No keystore file specified."))
+    /*
+     * - JKS      Java KeyStore
+     * - JCEKS    Java Cryptography Extension KeyStore
+     * - PKCS #12 Public-Key Cryptography Standards #12 KeyStore
+     * - BKS      Bouncy Castle KeyStore
+     * - BKS-V1   Older and incompatible version of Bouncy Castle KeyStore
+     */
+    val keyStoreType = settings
+      .getOrElse(SSE_STREAM_SETTINGS.SSL_KEYSTORE_TYPE, "JKS")
+
+    val keyStorePass = settings
+      .getOrElse(SSE_STREAM_SETTINGS.SSL_KEYSTORE_PASS, "")
+
+    val keyStoreAlgo = settings
+      .getOrElse(SSE_STREAM_SETTINGS.SSL_KEYSTORE_ALGO, "SunX509")
+
+    val trustStoreFile = settings.get(SSE_STREAM_SETTINGS.SSL_TRUSTSTORE_FILE)
+    /*
+     * - JKS      Java KeyStore
+     * - JCEKS    Java Cryptography Extension KeyStore
+     * - PKCS #12 Public-Key Cryptography Standards #12 KeyStore
+     * - BKS      Bouncy Castle KeyStore
+     * - BKS-V1   Older and incompatible version of Bouncy Castle KeyStore
+     */
+    val trustStoreType = settings
+      .getOrElse(SSE_STREAM_SETTINGS.SSL_TRUSTSTORE_TYPE, "JKS")
+
+    val trustStorePass = settings
+      .getOrElse(SSE_STREAM_SETTINGS.SSL_TRUSTSTORE_PASS, "")
+
+    val trustStoreAlgo = settings
+      .getOrElse(SSE_STREAM_SETTINGS.SSL_TRUSTSTORE_ALGO, "SunX509")
+
+    val cipherSuites = settings
+      .getOrElse(SSE_STREAM_SETTINGS.SSL_CIPHER_SUITES, "")
+      .split(",").map(_.trim).toList
+
+    val sslOptions = if (trustStoreFile.isEmpty) {
+      SslOptions.Builder.buildStoreOptions(
+        tlsVersion,
+        keyStoreFile,
+        keyStoreType,
+        keyStorePass,
+        keyStoreAlgo,
+        cipherSuites
+      )
+    }
+    else {
+      SslOptions.Builder.buildStoreOptions(
+        tlsVersion,
+        keyStoreFile,
+        keyStoreType,
+        keyStorePass,
+        keyStoreAlgo,
+        trustStoreFile.get,
+        trustStoreType,
+        trustStorePass,
+        trustStoreAlgo,
+        cipherSuites)
+
+    }
+
+    sslOptions
+
+  }
 
 }
