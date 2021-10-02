@@ -20,7 +20,7 @@ package de.kp.works.stream.sql.ignite
 
 object IGNITE_STREAM_SETTINGS {
 
-  val FORMAT_IGNITE = "de.kp.works.stream.sql.ignite.IgniteSinkProvider"
+  val FORMAT = "de.kp.works.stream.sql.ignite.IgniteSinkProvider"
   /**
    * The maximum batch size of the internal cache
    * before writing to Apache Ignite
