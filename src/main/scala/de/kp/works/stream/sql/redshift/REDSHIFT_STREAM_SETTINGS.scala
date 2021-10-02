@@ -22,9 +22,26 @@ object REDSHIFT_STREAM_SETTINGS {
 
   val FORMAT = "de.kp.works.stream.sql.redshift.RedshiftSinkProvider"
   /**
+   * The driver name of the Jdbc driver used to
+   * connect and access Amazon Redshift
+   */
+  val DEFAULT_JDBC_DRIVER_NAME = "com.amazon.redshift.jdbc42.Driver"
+  /**
    * The maximum batch size of the internal cache
    * before writing to Redshift
    */
-  val BATCH_SIZE = "batch.size"
+  val BATCH_SIZE   = "batch.size"
+  val REDSHIFT_DATABASE    = "redshift.database"
+  val REDSHIFT_HOST        = "redshift.host"
+  val REDSHIFT_JDBC_DRIVER = "redshift.jdbc.driver"
+  /**
+   * The maximum number of retries to write
+   * to A Redshift instance
+   */
+  val REDSHIFT_MAX_RETRIES = "redshift.max.retries"
+  val REDSHIFT_PASSWORD    = "redshift.password"
+  val REDSHIFT_PORT        = "redshift.port"
+  val REDSHIFT_TIMEOUT     = "redshift.timeout"
+  val REDSHIFT_USER        = "redshift.username"
 
 }

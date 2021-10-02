@@ -1,5 +1,4 @@
 package de.kp.works.stream.sql.snowflake
-
 /*
  * Copyright (c) 2020 - 2021 Dr. Krusche & Partner PartG. All rights reserved.
  *
@@ -19,20 +18,15 @@ package de.kp.works.stream.sql.snowflake
  *
  */
 
-import de.kp.works.stream.sql.Logging
-import org.apache.spark.sql.sources.v2.DataSourceOptions
+object SnowflakeUtil {
 
-import scala.collection.JavaConverters._
+  def classForName(className: String): Class[_] = {
 
-class SnowflakeOptions(options: DataSourceOptions) extends Logging {
+    val classLoader =
+      Option(Thread.currentThread().getContextClassLoader).getOrElse(this.getClass.getClassLoader)
 
-  private val settings:Map[String,String] = options.asMap.asScala.toMap
+    Class.forName(className, true, classLoader)
 
-  def getBatchSize:Int =
-    settings.getOrElse(SNOWFLAKE_STREAM_SETTINGS.BATCH_SIZE, "1000").toInt
-
-  def getJdbcDriver:String =
-    settings.getOrElse(SNOWFLAKE_STREAM_SETTINGS.JDBC_DRIVER,
-      SNOWFLAKE_STREAM_SETTINGS.DEFAULT_JDBC_DRIVER_NAME)
+  }
 
 }

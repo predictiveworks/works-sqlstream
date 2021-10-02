@@ -1,5 +1,4 @@
 package de.kp.works.stream.sql.snowflake
-
 /*
  * Copyright (c) 2020 - 2021 Dr. Krusche & Partner PartG. All rights reserved.
  *
@@ -27,6 +26,7 @@ import org.apache.spark.sql.sources.v2.writer.{DataWriter, DataWriterFactory, Wr
 import org.apache.spark.sql.streaming.OutputMode
 import org.apache.spark.sql.types._
 
+import java.sql.{Connection, PreparedStatement}
 import scala.collection.mutable.ArrayBuffer
 /**
  * Dummy commit message. The DataSourceV2 framework requires
@@ -108,6 +108,11 @@ case class SnowflakeStreamDataWriter(
   private val bufferSize = options.getBatchSize
   private val buffer = new ArrayBuffer[Row](bufferSize)
 
+  /* Use for batch writing */
+
+  private var conn: Connection = _
+  private var stmt: PreparedStatement = _
+
   override def abort(): Unit =
     log.info(s"Abort writing with ${buffer.size} records in local buffer.")
 
@@ -119,6 +124,12 @@ case class SnowflakeStreamDataWriter(
   override def write(t: InternalRow): Unit = ???
 
   /** SNOWFLAKE HELPER METHOD **/
+
+  /**
+   * This method performs a bath write to JDBC
+   * and a retry in case of a SQLException
+   */
+  private def doWriteAndResetBuffer(): Unit = ???
 
   private def doWriteAndClose():Unit = ???
 

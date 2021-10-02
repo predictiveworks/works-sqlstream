@@ -23,9 +23,14 @@ object SNOWFLAKE_STREAM_SETTINGS {
 
   val FORMAT = "de.kp.works.stream.sql.snowflake.SnowflakeSinkProvider"
   /**
+   * The driver name of the Jdbc driver used to
+   * connect and access Snowflake
+   */
+  val DEFAULT_JDBC_DRIVER_NAME = "com.snowflake.client.jdbc.SnowflakeDriver"
+  /**
    * The maximum batch size of the internal cache
    * before writing to Snowflake
    */
   val BATCH_SIZE = "batch.size"
-
+  val JDBC_DRIVER = "jdbc.driver"
 }

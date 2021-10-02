@@ -31,4 +31,58 @@ class RedshiftOptions(options: DataSourceOptions) extends Logging {
   def getBatchSize:Int =
     settings.getOrElse(REDSHIFT_STREAM_SETTINGS.BATCH_SIZE, "1000").toInt
 
+  /**
+   * The connection timeout is specified in seconds
+   * and defaults to 10
+   */
+  def getConnectionTimeout:Int =
+    settings.getOrElse(REDSHIFT_STREAM_SETTINGS.REDSHIFT_TIMEOUT, "10").toInt
+
+  /**
+   * The database url is a combination of host, port
+   * and database name
+   */
+  def getDatabaseUrl:String = {
+
+    val host = settings.getOrElse(REDSHIFT_STREAM_SETTINGS.REDSHIFT_HOST,
+      throw new Exception(s"No Redshift host specified."))
+
+    if (host.isEmpty)
+      throw new Exception(s"No Redshift host specified.")
+
+    val port = settings.getOrElse(REDSHIFT_STREAM_SETTINGS.REDSHIFT_PORT,
+      throw new Exception(s"No Redshift port specified.")).toInt
+
+    val database = settings.getOrElse(REDSHIFT_STREAM_SETTINGS.REDSHIFT_DATABASE,
+      throw new Exception(s"No Redshift database specified."))
+
+    if (database.isEmpty)
+      throw new Exception(s"No Redshift database specified.")
+
+    val url = s"$host:$port/$database"
+    url
+
+  }
+
+  def getJdbcDriver:String =
+    settings.getOrElse(REDSHIFT_STREAM_SETTINGS.REDSHIFT_JDBC_DRIVER,
+      REDSHIFT_STREAM_SETTINGS.DEFAULT_JDBC_DRIVER_NAME)
+
+  def getMaxRetries:Int =
+    settings.getOrElse(REDSHIFT_STREAM_SETTINGS.REDSHIFT_MAX_RETRIES, "3").toInt
+
+  /* User authentication */
+
+  def getUserAndPass:(Option[String], Option[String]) = {
+
+    val username =
+      settings.get(REDSHIFT_STREAM_SETTINGS.REDSHIFT_USER)
+
+    val password =
+      settings.get(REDSHIFT_STREAM_SETTINGS.REDSHIFT_PASSWORD)
+
+    (username, password)
+
+  }
+
 }

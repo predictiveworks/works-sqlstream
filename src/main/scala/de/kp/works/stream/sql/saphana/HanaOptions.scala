@@ -31,4 +31,8 @@ class HanaOptions(options: DataSourceOptions) extends Logging {
   def getBatchSize:Int =
     settings.getOrElse(HANA_STREAM_SETTINGS.BATCH_SIZE, "1000").toInt
 
+  def getJdbcDriver:String =
+    settings.getOrElse(HANA_STREAM_SETTINGS.JDBC_DRIVER,
+      HANA_STREAM_SETTINGS.DEFAULT_JDBC_DRIVER_NAME)
+
 }

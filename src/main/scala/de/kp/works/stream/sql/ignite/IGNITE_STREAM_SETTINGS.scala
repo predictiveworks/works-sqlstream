@@ -28,8 +28,7 @@ object IGNITE_STREAM_SETTINGS {
   val BATCH_SIZE = "batch.size"
 
   val IGNITE_ADDRESSES = "ignite.addresses"
-
-  val IGNITE_CACHE = "ignite.cache"
+  val IGNITE_CACHE     = "ignite.cache"
   /**
    * The values are `partitioned` or `replicated`.
    * Default is `partitioned`.

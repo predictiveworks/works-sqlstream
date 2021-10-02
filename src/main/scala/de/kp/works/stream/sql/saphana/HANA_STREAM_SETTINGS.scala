@@ -23,9 +23,14 @@ object HANA_STREAM_SETTINGS {
 
   val FORMAT = "de.kp.works.stream.sql.saphana.HanaSinkProvider"
   /**
+   * The driver name of the Jdbc driver used to
+   * connect and access SAP HANA
+   */
+  val DEFAULT_JDBC_DRIVER_NAME = "com.sap.db.jdbc.Driver"
+  /**
    * The maximum batch size of the internal cache
    * before writing to SAP HANA
    */
   val BATCH_SIZE = "batch.size"
-
+  val JDBC_DRIVER = "jdbc.driver"
 }
