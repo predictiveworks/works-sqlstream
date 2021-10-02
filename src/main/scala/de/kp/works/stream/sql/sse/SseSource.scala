@@ -1,4 +1,4 @@
-package de.kp.works.stream.sql.mqtt.ditto
+package de.kp.works.stream.sql.sse
 /*
  * Copyright (c) 2020 - 2021 Dr. Krusche & Partner PartG. All rights reserved.
  *
@@ -32,16 +32,16 @@ import scala.collection.JavaConverters._
 import scala.collection.concurrent.TrieMap
 import scala.collection.mutable.ListBuffer
 
-class DittoSource(options: DittoOptions)
+class SseSource(options: SseOptions)
   extends MicroBatchReader with Logging {
 
   private var startOffset: Offset = _
   private var endOffset: Offset   = _
 
-  private val messages = new TrieMap[Long, DittoMessage]
+  private val events = new TrieMap[Long, SseEvent]
 
   private val persistence = options.getPersistence
-  private val store = new DittoEventStore(persistence)
+  private val store = new SseEventStore(persistence)
 
   @GuardedBy("this")
   private var currentOffset: LongOffset = LongOffset(-1L)
@@ -49,15 +49,15 @@ class DittoSource(options: DittoOptions)
   @GuardedBy("this")
   private var lastOffsetCommitted: LongOffset = LongOffset(-1L)
 
-  private var client:DittoClient = _
-  buildDittoClient()
+  private var client:SseClient = _
+  buildSseClient()
 
   override def commit(offset: Offset): Unit = synchronized {
 
     val newOffset = LongOffset.convert(offset)
     if (newOffset.isEmpty) {
 
-      val message = s"[DittoSource] Method `commit` received an offset (${offset.toString}) that did not originate from this source.)"
+      val message = s"[SseSource] Method `commit` received an offset (${offset.toString}) that did not originate from this source.)"
       sys.error(message)
 
     }
@@ -65,14 +65,14 @@ class DittoSource(options: DittoOptions)
     val offsetDiff = (newOffset.get.offset - lastOffsetCommitted.offset).toInt
     if (offsetDiff < 0) {
 
-      val message = s"[DittoSource] Offsets committed are out of order: $lastOffsetCommitted followed by $offset.toString"
+      val message = s"[SseSource] Offsets committed are out of order: $lastOffsetCommitted followed by $offset.toString"
       sys.error(message)
 
     }
 
     (lastOffsetCommitted.offset until newOffset.get.offset)
       .foreach { x =>
-        messages.remove(x + 1)
+        events.remove(x + 1)
         store.remove(x + 1)
       }
 
@@ -94,13 +94,13 @@ class DittoSource(options: DittoOptions)
 
   override def planInputPartitions(): util.List[InputPartition[InternalRow]] = {
 
-    val rawMessages: IndexedSeq[DittoMessage] = synchronized {
+    val rawEvents: IndexedSeq[SseEvent] = synchronized {
 
       val sliceStart = LongOffset.convert(startOffset).get.offset + 1
       val sliceEnd   = LongOffset.convert(endOffset).get.offset + 1
 
       for (i <- sliceStart until sliceEnd) yield
-        messages.getOrElse(i, store.retrieve[DittoMessage](i))
+        events.getOrElse(i, store.retrieve[SseEvent](i))
     }
 
     val spark = SparkSession.getActiveSession.get
@@ -108,9 +108,9 @@ class DittoSource(options: DittoOptions)
     /*
      * `slices` prepares the partitioned output
      */
-    val slices = Array.fill(numPartitions)(new ListBuffer[DittoMessage])
+    val slices = Array.fill(numPartitions)(new ListBuffer[SseEvent])
 
-    rawMessages.zipWithIndex
+    rawEvents.zipWithIndex
       .foreach {case (rawEvent, index) => slices(index % numPartitions).append(rawEvent)}
     /*
      * Transform `slices` into [DataFrame] compliant [InternalRow]s.
@@ -134,10 +134,10 @@ class DittoSource(options: DittoOptions)
 
             override def get(): InternalRow = {
               /*
-               * [DittoUtil] transforms the [DittoMessage] into
+               * [SseUtil] transforms the [SseEvent] into
                * a schema compliant sequence of values
                */
-              val values = DittoUtil.getValues(slice(currentIdx), schemaType)
+              val values = SseUtil.getValues(slice(currentIdx), schemaType)
               InternalRow(values)
             }
 
@@ -151,7 +151,7 @@ class DittoSource(options: DittoOptions)
   }
 
   override def readSchema(): StructType =
-    DittoSchema.getSchema(options.getSchemaType)
+    SseSchema.getSchema(options.getSchemaType)
 
   override def setOffsetRange(start: Optional[Offset], end: Optional[Offset]): Unit = synchronized {
 
@@ -164,21 +164,21 @@ class DittoSource(options: DittoOptions)
     client.disconnect()
   }
 
-  private def buildDittoClient():Unit = {
+  private def buildSseClient():Unit = {
 
-    client = DittoClient.build(options)
+    client = SseClient.build(options)
 
-    val expose = new DittoExpose() {
+    val expose = new SseExpose() {
 
-      override def messageArrived(message:DittoMessage): Unit =  synchronized {
+      override def eventArrived(event:SseEvent): Unit =  synchronized {
 
         val offset = currentOffset.offset + 1L
-        messages.put(offset, message)
+        events.put(offset, event)
 
-        store.store(offset, message)
+        store.store(offset, event)
 
         currentOffset = LongOffset(offset)
-        log.trace(s"Message arrived, ${message.`type`} ${message.payload}")
+        log.trace(s"Event arrived, ${event.sseType} ${event.sseData}")
 
       }
 
