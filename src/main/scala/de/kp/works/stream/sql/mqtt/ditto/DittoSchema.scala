@@ -47,17 +47,27 @@ object DittoSchema {
   private def getFeatureSchema:StructType = {
 
     val fields:Array[StructField] = Array(
-      StructField("id",         StringType, nullable = false),
-      StructField("timestamp",  LongType, nullable = false),
-      StructField("feature_id", StringType, nullable = true),
-      StructField("properties", StringType, nullable = true)
+      StructField("id",        StringType, nullable = false),
+      StructField("timestamp", LongType, nullable = false),
+      StructField("feature",   StringType, nullable = true)
     )
 
     StructType(fields)
 
   }
 
-  private def getFeaturesSchema:StructType = ???
+  private def getFeaturesSchema:StructType = {
+
+    val fields:Array[StructField] = Array(
+      StructField("id",        StringType, nullable = false),
+      StructField("timestamp", LongType, nullable = false),
+      StructField("features",  ArrayType(StringType, containsNull = false), nullable = true)
+    )
+
+    StructType(fields)
+
+
+  }
 
   private def getMessageSchema:StructType = {
 
@@ -90,6 +100,18 @@ object DittoSchema {
 
   }
 
-  private def getThingSchema:StructType = ???
+  private def getThingSchema:StructType = {
+
+    val fields:Array[StructField] = Array(
+      StructField("id",        StringType, nullable = false),
+      StructField("timestamp", LongType, nullable = false),
+      StructField("name",      StringType, nullable = true),
+      StructField("namespace", StringType, nullable = true),
+      StructField("features",  ArrayType(StringType, containsNull = false), nullable = true)
+    )
+
+    StructType(fields)
+
+  }
 
 }

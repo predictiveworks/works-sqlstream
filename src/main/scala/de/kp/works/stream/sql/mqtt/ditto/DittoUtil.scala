@@ -1,7 +1,4 @@
 package de.kp.works.stream.sql.mqtt.ditto
-
-import com.google.gson.JsonParser
-
 /*
  * Copyright (c) 2020 - 2021 Dr. Krusche & Partner PartG. All rights reserved.
  *
@@ -20,6 +17,9 @@ import com.google.gson.JsonParser
  * @author Stefan Krusche, Dr. Krusche & Partner PartG
  *
  */
+
+import com.google.gson.{JsonObject, JsonParser}
+import scala.collection.JavaConversions._
 
 object DittoUtil {
   /**
@@ -49,8 +49,7 @@ object DittoUtil {
    *
    * - id
    * - timestamp
-   * - feature_id
-   * - properties (serialized
+   * - feature (serialized)
    */
   def getFeatureValues(message:DittoMessage):Seq[Any] = {
 
@@ -60,17 +59,37 @@ object DittoUtil {
       .getAsJsonObject
 
     val timestamp = json.get("timestamp").getAsLong
-    val feature_id = json.get("id").getAsString
 
-    val properties = json.get("properties").toString
-    Seq(id, timestamp, feature_id, properties)
+    val jFeature = new JsonObject
+    jFeature.addProperty("id", json.get("id").getAsString)
+    jFeature.add("properties", json.get("properties"))
+
+    Seq(id, timestamp, jFeature.toString)
 
   }
-
+  /**
+   * The value representation of a certain feature change:
+   *
+   * - id
+   * - timestamp
+   * - features (Array of serialized)
+   */
   def getFeaturesValues(message:DittoMessage):Seq[Any] = {
 
     val id = "ditto-" + java.util.UUID.randomUUID.toString
-    ???
+
+    val json = JsonParser.parseString(message.payload)
+      .getAsJsonObject
+
+    val timestamp = json.get("timestamp").getAsLong
+    /*
+     * Serialize each feature
+     */
+    val features  = json.get("features").getAsJsonArray
+      .map(_.toString).toArray
+
+    Seq(id, timestamp, features)
+
   }
 
   /**
@@ -114,11 +133,35 @@ object DittoUtil {
     Seq(id, message.`type`, message.payload)
 
   }
-
+  /**
+   * The value representation of a certain thing change:
+   *
+   * - id
+   * - timestamp
+   * - name
+   * - namespace
+   * - features (Array of serialized)
+   */
   def getThingValues(message:DittoMessage):Seq[Any] = {
 
     val id = "ditto-" + java.util.UUID.randomUUID.toString
-    ???
+
+    val json = JsonParser.parseString(message.payload)
+      .getAsJsonObject
+
+    val timestamp = json.get("timestamp").getAsLong
+
+    val name = json.get("name").getAsString
+    val namespace = json.get("namespace").getAsString
+
+    /*
+     * Serialize each feature
+     */
+    val features  = json.get("features").getAsJsonArray
+      .map(_.toString).toArray
+
+    Seq(id, timestamp, name, namespace, features)
+
   }
 
 }
