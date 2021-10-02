@@ -19,7 +19,7 @@ package de.kp.works.stream.sql.mqtt.hivemq
  */
 
 import de.kp.works.stream.sql.{Logging, LongOffset}
-import de.kp.works.stream.sql.mqtt.{MqttEvent, MqttSchema}
+import de.kp.works.stream.sql.mqtt.{MqttEvent, MqttSchema, MqttUtil}
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.sources.v2.reader.{InputPartition, InputPartitionReader}
@@ -119,6 +119,7 @@ class HiveSource(options: HiveOptions)
      * Note, the order of values must be compliant to the defined
      * schema
      */
+    val schemaType = options.getSchemaType
     (0 until numPartitions).map{i =>
 
       val slice = slices(i)
@@ -137,7 +138,8 @@ class HiveSource(options: HiveOptions)
                * Schema compliant value representation
                * of an [MqttEvent].
                */
-              InternalRow(slice(currentIdx).getValues)
+              val values = MqttUtil.getValues(slice(currentIdx), schemaType)
+              InternalRow(values)
             }
 
             override def close(): Unit = {/* Do nothing */}

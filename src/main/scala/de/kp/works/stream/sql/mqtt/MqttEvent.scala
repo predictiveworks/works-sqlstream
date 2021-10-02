@@ -49,8 +49,6 @@ class MqttEvent(val topic:String, message:MqttMessage) {
    */
   val payload: Array[Byte] = message.getPayload
 
-  def getValues:Seq[Any] = Seq(id, timestamp, topic, qos, duplicate, retained, payload)
-
   override def toString: String = {
     s"""MQTTEvent.
        |EventId: ${this.id}
