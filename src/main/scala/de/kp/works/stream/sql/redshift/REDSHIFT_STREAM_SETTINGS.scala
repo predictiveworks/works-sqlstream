@@ -21,5 +21,10 @@ package de.kp.works.stream.sql.redshift
 object REDSHIFT_STREAM_SETTINGS {
 
   val FORMAT = "de.kp.works.stream.sql.redshift.RedshiftSinkProvider"
+  /**
+   * The maximum batch size of the internal cache
+   * before writing to Redshift
+   */
+  val BATCH_SIZE = "batch.size"
 
 }

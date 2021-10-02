@@ -22,5 +22,10 @@ package de.kp.works.stream.sql.snowflake
 object SNOWFLAKE_STREAM_SETTINGS {
 
   val FORMAT = "de.kp.works.stream.sql.snowflake.SnowflakeSinkProvider"
+  /**
+   * The maximum batch size of the internal cache
+   * before writing to Snowflake
+   */
+  val BATCH_SIZE = "batch.size"
 
 }

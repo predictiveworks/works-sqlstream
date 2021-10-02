@@ -20,11 +20,14 @@ package de.kp.works.stream.sql.snowflake
  */
 
 import de.kp.works.stream.sql.Logging
+import org.apache.spark.sql.Row
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.sources.v2.writer.streaming.StreamWriter
-import org.apache.spark.sql.sources.v2.writer.{DataWriterFactory, WriterCommitMessage}
+import org.apache.spark.sql.sources.v2.writer.{DataWriter, DataWriterFactory, WriterCommitMessage}
 import org.apache.spark.sql.streaming.OutputMode
 import org.apache.spark.sql.types._
+
+import scala.collection.mutable.ArrayBuffer
 /**
  * Dummy commit message. The DataSourceV2 framework requires
  * a commit message implementation but we don't need to really
@@ -66,7 +69,59 @@ class SnowflakeStreamWriter(
   override def commit(epochId: Long, writerCommitMessages: Array[WriterCommitMessage]): Unit = {
     log.info(s"epoch $epochId of SnowflakeStreamWriter committed.")
   }
-  override def createWriterFactory(): DataWriterFactory[InternalRow] = ???
+  override def createWriterFactory(): DataWriterFactory[InternalRow] =
+    SnowflakeStreamWriterFactory(options, outputMode, schema)
 
 }
+/**
+ * A [DataWriterFactory] for Snowflake writing. This factory
+ * will be serialized and sent to executors to generate the
+ * per-task data writers.
+ */
+case class SnowflakeStreamWriterFactory(
+  options:SnowflakeOptions,
+  outputMode:OutputMode,
+  schema: StructType) extends DataWriterFactory[InternalRow] with Logging {
+
+  override def createDataWriter(
+    partitionId: Int,
+    taskId: Long,
+    epochId: Long): DataWriter[InternalRow] = {
+
+    log.info(s"Create date writer for epochId=$epochId, taskId=$taskId, and partitionId=$partitionId.")
+    SnowflakeStreamDataWriter(options, outputMode, schema)
+
+  }
+
+}
+/**
+ * A [DataWriter] for Snowflake writing. A data writer will be created
+ * in each partition to process incoming rows.
+ */
+case class SnowflakeStreamDataWriter(
+  options:SnowflakeOptions,
+  outputMode:OutputMode,
+  schema: StructType) extends DataWriter[InternalRow] with Logging {
+
+  /* Use a local cache for batch write to Snowflake */
+
+  private val bufferSize = options.getBatchSize
+  private val buffer = new ArrayBuffer[Row](bufferSize)
+
+  override def abort(): Unit =
+    log.info(s"Abort writing with ${buffer.size} records in local buffer.")
+
+  override def commit(): WriterCommitMessage = {
+    doWriteAndClose()
+    SnowflakeWriterCommitMessage
+  }
+
+  override def write(t: InternalRow): Unit = ???
+
+  /** SNOWFLAKE HELPER METHOD **/
+
+  private def doWriteAndClose():Unit = ???
+
+}
+
 

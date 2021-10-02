@@ -1,0 +1,3 @@
+
+# Redshift as Streaming Sink
+

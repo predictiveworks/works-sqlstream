@@ -1,0 +1,2 @@
+
+# Snowflake as Streaming Sink

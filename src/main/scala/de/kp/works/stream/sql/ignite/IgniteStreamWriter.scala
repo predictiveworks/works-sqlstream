@@ -135,9 +135,8 @@ case class IgniteStreamDataWriter(
 
   private val cache = getOrCreateCache(cacheName)
 
-  override def abort(): Unit = {
+  override def abort(): Unit =
     log.info(s"Abort writing with ${buffer.size} records in local buffer.")
-  }
 
   override def commit(): WriterCommitMessage = {
     doWriteAndClose()

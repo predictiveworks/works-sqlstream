@@ -22,5 +22,10 @@ package de.kp.works.stream.sql.saphana
 object HANA_STREAM_SETTINGS {
 
   val FORMAT = "de.kp.works.stream.sql.saphana.HanaSinkProvider"
+  /**
+   * The maximum batch size of the internal cache
+   * before writing to SAP HANA
+   */
+  val BATCH_SIZE = "batch.size"
 
 }

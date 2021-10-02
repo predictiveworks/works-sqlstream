@@ -28,4 +28,7 @@ class RedshiftOptions(options: DataSourceOptions) extends Logging {
 
   private val settings:Map[String,String] = options.asMap.asScala.toMap
 
+  def getBatchSize:Int =
+    settings.getOrElse(REDSHIFT_STREAM_SETTINGS.BATCH_SIZE, "1000").toInt
+
 }
