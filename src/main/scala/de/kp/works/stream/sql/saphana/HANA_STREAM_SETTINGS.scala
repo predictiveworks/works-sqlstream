@@ -32,5 +32,17 @@ object HANA_STREAM_SETTINGS {
    * before writing to SAP HANA
    */
   val BATCH_SIZE = "batch.size"
-  val JDBC_DRIVER = "jdbc.driver"
+  val HANA_DATABASE    = "hana.database"
+  val HANA_HOST        = "hana.host"
+  val HANA_JDBC_DRIVER = "hana.jdbc.driver"
+  /**
+   * The maximum number of retries to write
+   * to SAP HANA instance
+   */
+  val HANA_MAX_RETRIES = "hana.max.retries"
+  val HANA_PASSWORD    = "hana.password"
+  val HANA_PORT        = "hana.port"
+  val HANA_TIMEOUT     = "hana.timeout"
+  val HANA_USER        = "hana.username"
+
 }

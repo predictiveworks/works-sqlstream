@@ -18,7 +18,23 @@ package de.kp.works.stream.sql.saphana
  *
  */
 
+import org.apache.spark.sql.execution.datasources.jdbc.DriverRegistry
+
+import java.sql.{Connection, Driver, DriverManager}
+import java.util.Properties
+import scala.collection.JavaConverters._
+
 object HanaUtil {
+
+  def getDriverClassName(jdbcDriverName:String): String = {
+    jdbcDriverName match {
+      case "com.sap.db.jdbc.Driver" =>
+        classForName(jdbcDriverName).getName
+      case _ =>
+        classForName(HANA_STREAM_SETTINGS.DEFAULT_JDBC_DRIVER_NAME).getName
+
+    }
+  }
 
   def classForName(className: String): Class[_] = {
 
@@ -26,6 +42,63 @@ object HanaUtil {
       Option(Thread.currentThread().getContextClassLoader).getOrElse(this.getClass.getClassLoader)
 
     Class.forName(className, true, classLoader)
+
+  }
+
+  def getConnection(options:HanaOptions): Connection = {
+
+    val driverClassName = getDriverClassName(options.getJdbcDriver)
+    DriverRegistry.register(driverClassName)
+
+    val driverWrapperClass: Class[_] =
+      classForName("org.apache.spark.sql.execution.datasources.jdbc.DriverWrapper")
+
+    def getWrapped(d: Driver): Driver = {
+
+      require(driverWrapperClass.isAssignableFrom(d.getClass))
+      driverWrapperClass.getDeclaredMethod("wrapped").invoke(d).asInstanceOf[Driver]
+
+    }
+    /*
+     * Note that we purposely don't call #DriverManager.getConnection() here:
+     * we want to ensure that an explicitly-specified user-provided driver
+     * class can take precedence over the default class, but
+     *
+     *                 #DriverManager.getConnection()
+     *
+     * might return a according to a different precedence. At the same time,
+     * we don't want to create a driver-per-connection, so we use the DriverManager's
+     * driver instances to handle that singleton logic for us.
+     */
+    val driver: Driver = DriverManager.getDrivers.asScala
+      .collectFirst {
+        case d if driverWrapperClass.isAssignableFrom(d.getClass)
+          && getWrapped(d).getClass.getCanonicalName == driverClassName => d
+        case d if d.getClass.getCanonicalName == driverClassName => d
+      }.getOrElse {
+      throw new IllegalArgumentException(
+        s"Did not find registered SAP HANA driver with class $driverClassName")
+    }
+
+    var url = s"jdbc:sap://${options.getDatabaseUrl}"
+
+    /* User authentication */
+
+    val (user, pass) = options.getUserAndPass
+
+    val authProps = new Properties()
+    if (user.isDefined && pass.isDefined) {
+      /*
+       * User authentication parameters are set
+       * as URL parameters. For more details:
+       *
+       * https://help.sap.com/viewer/0eec0d68141541d1b07893a39944924e/2.0.03/en-US/ff15928cf5594d78b841fbbe649f04b4.html
+       */
+      url = url + "&user=" + user.get + "&password=" + pass.get
+
+    }
+
+    driver.connect(url, authProps)
 
   }
 

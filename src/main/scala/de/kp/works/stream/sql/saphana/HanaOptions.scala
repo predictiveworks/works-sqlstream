@@ -31,8 +31,62 @@ class HanaOptions(options: DataSourceOptions) extends Logging {
   def getBatchSize:Int =
     settings.getOrElse(HANA_STREAM_SETTINGS.BATCH_SIZE, "1000").toInt
 
+  /**
+   * The connection timeout is specified in seconds
+   * and defaults to 10
+   */
+  def getConnectionTimeout:Int =
+    settings.getOrElse(HANA_STREAM_SETTINGS.HANA_TIMEOUT, "10").toInt
+
+  /**
+   * The database url is a combination of host, port
+   * and database name, and has a HANA specific url
+   * representation
+   */
+  def getDatabaseUrl:String = {
+
+    val host = settings.getOrElse(HANA_STREAM_SETTINGS.HANA_HOST,
+      throw new Exception(s"No SAP HANA host specified."))
+
+    if (host.isEmpty)
+      throw new Exception(s"No SAP HANA host specified.")
+
+    val port = settings.getOrElse(HANA_STREAM_SETTINGS.HANA_PORT,
+      throw new Exception(s"No SAP HANA port specified.")).toInt
+
+    val database = settings.getOrElse(HANA_STREAM_SETTINGS.HANA_DATABASE,
+      throw new Exception(s"No SAP HANA database specified."))
+
+    if (database.isEmpty)
+      throw new Exception(s"No SAP HANA database specified.")
+    /*
+     * NOTE: The `?` is a SAP HANA specification of the
+     * database name parameter within the JDBC url
+     */
+    val url = s"$host:$port/?$database"
+    url
+
+  }
+
   def getJdbcDriver:String =
-    settings.getOrElse(HANA_STREAM_SETTINGS.JDBC_DRIVER,
+    settings.getOrElse(HANA_STREAM_SETTINGS.HANA_JDBC_DRIVER,
       HANA_STREAM_SETTINGS.DEFAULT_JDBC_DRIVER_NAME)
+
+  def getMaxRetries:Int =
+    settings.getOrElse(HANA_STREAM_SETTINGS.HANA_MAX_RETRIES, "3").toInt
+
+  /* User authentication */
+
+  def getUserAndPass:(Option[String], Option[String]) = {
+
+    val username =
+      settings.get(HANA_STREAM_SETTINGS.HANA_USER)
+
+    val password =
+      settings.get(HANA_STREAM_SETTINGS.HANA_PASSWORD)
+
+    (username, password)
+
+  }
 
 }

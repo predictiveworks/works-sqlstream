@@ -18,7 +18,9 @@ package de.kp.works.stream.sql.mqtt.ditto
  *
  */
 
-import com.google.gson.{JsonObject, JsonParser}
+import com.google.gson.{JsonElement, JsonParser}
+import org.apache.spark.sql.Row
+
 import scala.collection.JavaConversions._
 
 object DittoUtil {
@@ -49,7 +51,14 @@ object DittoUtil {
    *
    * - id
    * - timestamp
-   * - feature (serialized)
+   * - featureId
+   * - properties [
+   *     {
+   *        - name
+   *        - type
+   *        - value (serialized)
+   *     }
+   *   ]
    */
   def getFeatureValues(message:DittoMessage):Seq[Any] = {
 
@@ -59,12 +68,33 @@ object DittoUtil {
       .getAsJsonObject
 
     val timestamp = json.get("timestamp").getAsLong
+    val featureId = json.get("id").getAsString
 
-    val jFeature = new JsonObject
-    jFeature.addProperty("id", json.get("id").getAsString)
-    jFeature.add("properties", json.get("properties"))
+    val properties = json.get("properties")
+      .getAsJsonArray
+      .map(property2Row)
+      .toArray
 
-    Seq(id, timestamp, jFeature.toString)
+    Seq(id, timestamp, featureId, properties)
+
+  }
+  /**
+   * A helper method to transform a Ditto
+   * property from JSON to Spark SQL Row
+   */
+  private def property2Row(property:JsonElement):Row = {
+
+    val jsonObject = property.getAsJsonObject
+
+    val propertyName = jsonObject.get("name").getAsString
+    val propertyType = jsonObject.get("type").getAsString
+    /*
+     * Serialized representation of the property value
+     */
+    val propertyValue = jsonObject.get("value").toString
+
+    val values = Seq(propertyName, propertyType, propertyValue)
+    Row.fromSeq(values)
 
   }
   /**
