@@ -43,6 +43,7 @@ object REDSHIFT_STREAM_SETTINGS {
   val REDSHIFT_MAX_RETRIES = "redshift.max.retries"
   val REDSHIFT_PASSWORD    = "redshift.password"
   val REDSHIFT_PORT        = "redshift.port"
+  val REDSHIFT_PRIMARY_KEY = "redshift.primary.key"
   val REDSHIFT_SORT_KEY    = "redshift.sort.key"
   val REDSHIFT_TABLE       = "redshift.table"
   val REDSHIFT_TIMEOUT     = "redshift.timeout"

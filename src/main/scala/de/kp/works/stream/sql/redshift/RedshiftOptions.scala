@@ -97,6 +97,9 @@ class RedshiftOptions(options: DataSourceOptions) extends Logging {
   def getMaxRetries:Int =
     settings.getOrElse(REDSHIFT_STREAM_SETTINGS.REDSHIFT_MAX_RETRIES, "3").toInt
 
+  def getPrimaryKey:Option[String] =
+    settings.get(REDSHIFT_STREAM_SETTINGS.REDSHIFT_PRIMARY_KEY)
+
   /**
    * A full Redshift Sort Key definition.
    *

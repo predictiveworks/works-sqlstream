@@ -85,7 +85,27 @@ object RedshiftUtil {
     success
 
   }
+  /**
+   * The INSERT SQL statement is built from the provided
+   * schema specification as the Redshift stream writer
+   * ensures that table schema and provided schema are
+   * identical
+   */
+  def createInsertSql(schema:StructType, options:RedshiftOptions): String = {
 
+    val table = options.getTable
+
+    val columns = schema.fields
+      .map(field =>
+        field.name.replace("\"", "\\\""))
+      .mkString(",")
+
+    val values = schema.fields.map(_ => "?").mkString(",")
+    val insertSql = s"INSERT INTO $table ($columns) VALUES($values)"
+
+    insertSql
+
+  }
   /**
    * Generate CREATE TABLE statement for Redshift
    */
@@ -94,7 +114,7 @@ object RedshiftUtil {
      * STEP #1: Build the Redshift compliant SQL schema
      * from the provided schema
      */
-    val sqlSchema = buildSqlSchema(schema)
+    val sqlSchema = buildSqlSchema(schema, options)
     /*
      * STEP #2: Add default and user specific parameters
      */
@@ -234,12 +254,11 @@ object RedshiftUtil {
   /**
    * Compute the Redshift SQL schema string for the given Spark SQL Schema.
    */
-  def buildSqlSchema(schema: StructType): String = {
+  def buildSqlSchema(schema: StructType, options:RedshiftOptions): String = {
 
-    val sb = new StringBuilder()
-    schema.fields.foreach { field => {
+    var sqlSchema = schema.fields.map { field => {
 
-      val fname = field.name
+      var fname = field.name
       val ftype = field.dataType match {
         /*
          * The current implementation supports primitive data types
@@ -270,12 +289,17 @@ object RedshiftUtil {
         ""
       }
 
-      sb.append(s""", "${fname.replace("\"", "\\\"")}" $ftype $nullable $encoding""".trim)
+      fname = fname.replace("\"", "\\\"")
+      s"$fname $ftype $nullable $encoding".trim
 
-    }
-    }
+    }}.mkString(", ")
 
-    if (sb.length < 2) "" else sb.substring(2)
+    if (options.getPrimaryKey.isEmpty) return sqlSchema
+    val primaryKey = options.getPrimaryKey.get
+      .replace("\"", "\\\"")
+
+    sqlSchema = sqlSchema + s", PRIMARY KEY($primaryKey)"
+    sqlSchema
 
   }
 
