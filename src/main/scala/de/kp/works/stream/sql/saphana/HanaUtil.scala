@@ -20,9 +20,10 @@ package de.kp.works.stream.sql.saphana
 
 import org.apache.spark.sql.execution.datasources.jdbc.DriverRegistry
 
-import java.sql.{Connection, Driver, DriverManager}
+import java.sql.{Connection, Driver, DriverManager, ResultSet, Statement}
 import java.util.Properties
 import scala.collection.JavaConverters._
+import scala.collection.mutable
 
 object HanaUtil {
 
@@ -99,6 +100,51 @@ object HanaUtil {
     }
 
     driver.connect(url, authProps)
+
+  }
+  /**
+   * This method checks whether the provided Redshift
+   * table exists and if, returns the column metadata
+   * representation to merge with the Spark SQL schema
+   */
+  def getColumnTypes(conn:Connection, tableName:String):Seq[Int] = {
+
+    var stmt:Statement = null
+    val columnTypes = mutable.ArrayBuffer.empty[Int]
+
+    try {
+
+      stmt = conn.createStatement()
+      /*
+       * Run a query against the database table that returns 0 records,
+       * but returns valid ResultSetMetadata that can be used to optimize
+       * write requests to the Redshift database
+       */
+      val rs:ResultSet = stmt.executeQuery(s"SELECT * FROM $tableName WHERE 1 = 0")
+      val rsMetadata = rs.getMetaData
+
+      val columnCount = rsMetadata.getColumnCount
+      (0 until columnCount).foreach(i =>
+        columnTypes += rsMetadata.getColumnType(i + 1)
+      )
+
+    } catch {
+      case _:Throwable => /* Do nothing */
+
+
+    } finally {
+
+      if (stmt != null)
+        try {
+          stmt.close()
+
+        } catch {
+          case _:Throwable => /* Do nothing */
+        }
+
+    }
+
+    columnTypes
 
   }
 

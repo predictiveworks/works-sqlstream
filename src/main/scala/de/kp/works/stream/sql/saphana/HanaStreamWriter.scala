@@ -26,7 +26,7 @@ import org.apache.spark.sql.sources.v2.writer.{DataWriter, DataWriterFactory, Wr
 import org.apache.spark.sql.streaming.OutputMode
 import org.apache.spark.sql.types._
 
-import java.sql.{Connection, PreparedStatement}
+import java.sql.{Connection, PreparedStatement, SQLException}
 import scala.collection.mutable.ArrayBuffer
 /**
  * Dummy commit message. The DataSourceV2 framework requires
@@ -113,6 +113,25 @@ case class HanaStreamDataWriter(
   private var conn: Connection = _
   private var stmt: PreparedStatement = _
 
+  private var sql:String = _
+
+  private val maxRetries = options.getMaxRetries
+  private val timeoutSeconds = options.getConnectionTimeout
+
+  /*
+   * Extract schema meta information
+   */
+  private val numFields = schema.fields.length
+  /*
+   * Compute SAP HANA JDBC compliant NULL types
+   * to insert into the prepared statement in
+   * case of a NULL value
+   */
+  private val nullTypes = schema.fields
+    .map(field => getNullType(field.dataType))
+
+  validateSchema()
+
   override def abort(): Unit =
     log.info(s"Abort writing with ${buffer.size} records in local buffer.")
 
@@ -121,16 +140,139 @@ case class HanaStreamDataWriter(
     HanaWriterCommitMessage
   }
 
-  override def write(t: InternalRow): Unit = ???
+  override def write(record: InternalRow): Unit = {
+
+    buffer.append(Row.fromSeq(record.copy().toSeq(schema)))
+    if (buffer.size == bufferSize) {
+
+      log.debug(s"Local buffer is full with size $bufferSize, do write and reset local buffer.")
+      doWriteAndResetBuffer()
+
+    }
+
+  }
 
   /** HANA HELPER METHOD **/
+
+
+  private def getNullType(dataType:DataType):Int = ???
+
+  private def validateSchema(): Unit = ???
+
+  private def insertValue(
+    stmt:PreparedStatement,
+    row:Row,
+    pos:Int):Unit = ???
+
+  private def resetConnAndStmt(): Unit = {
+    /*
+     * Use a local connection cache, to avoid
+     * getting a new connection every time.
+     */
+    if (conn == null || !conn.isValid(timeoutSeconds)) {
+
+      conn = HanaUtil.getConnection(options)
+      stmt = conn.prepareStatement(sql)
+
+      log.info("Current connection is invalid, create a new one.")
+
+    } else {
+      log.debug("Current connection is valid, reuse it.")
+    }
+  }
 
   /**
    * This method performs a bath write to JDBC
    * and a retry in case of a SQLException
    */
-  private def doWriteAndResetBuffer(): Unit = ???
+  private def doWriteAndResetBuffer(): Unit = {
 
-  private def doWriteAndClose():Unit = ???
+    resetConnAndStmt()
+
+    var numRetries = 0
+    val size = buffer.size
+
+    while (numRetries <= maxRetries) {
+
+      try {
+
+        val start = System.currentTimeMillis()
+        val iterator = buffer.iterator
+
+        while (iterator.hasNext) {
+          val row = iterator.next()
+          var i = 0
+          while (i < numFields) {
+            /*
+             * Fill prepared SQL statement with row values
+             */
+            if (row.isNullAt(i))
+              stmt.setNull(i + 1, nullTypes(i))
+
+            else
+              insertValue(stmt, row, i)
+
+            i += 1
+
+          }
+
+          stmt.addBatch()
+
+        }
+        stmt.executeBatch()
+        buffer.clear()
+
+        log.debug(s"Successful write of $size records,"
+          + s"with retry number $numRetries, cost ${System.currentTimeMillis() - start} ms")
+
+        /* Abort condition for while loop */
+        numRetries = maxRetries + 1
+
+      } catch {
+        case e: SQLException =>
+          if (numRetries <= maxRetries) {
+            numRetries += 1
+            resetConnAndStmt()
+
+            log.warn(s"Failed to write $size records, retry number $numRetries!", e)
+
+          } else {
+            log.error(s"Failed to write $size records,"
+              + s"reach max retry number $maxRetries, abort writing!")
+
+            throw e
+          }
+
+        case t: Throwable =>
+          log.error(s"Failed to write $size records, not suited for retry , writing to Redshift aborted.", t)
+          throw t
+      }
+
+    }
+
+  }
+
+  /**
+   * This method write remaining buffer entries
+   * to the SAP HANA database and then clears
+   * the buffer and closes the JDBC connection
+   */
+  private def doWriteAndClose():Unit = {
+
+    if (buffer.nonEmpty) {
+      doWriteAndResetBuffer()
+    }
+
+    if (conn != null) {
+      try {
+        conn.close()
+
+      } catch {
+        case t: Throwable =>
+          log.error("Close connection with exception", t)
+      }
+    }
+
+  }
 
 }

@@ -63,6 +63,32 @@ class RedshiftOptions(options: DataSourceOptions) extends Logging {
     url
 
   }
+  /**
+   * The name of a column in the table to use as the distribution
+   * key when creating a table.
+   */
+  def getDistKey:Option[String] = {
+    /*
+     * `DISTKEY` has no default, but is optional
+     * unless using diststyle KEY
+     */
+    val distKey = settings.get(REDSHIFT_STREAM_SETTINGS.REDSHIFT_DIST_KEY)
+    if (getDistStyle == "KEY" && distKey.isEmpty)
+      throw new Exception(s"No Redshift DISTKEY must not be empty for DISTSTYLE = KEY.")
+
+    distKey
+
+  }
+  /**
+   * The Redshift Distribution Style to be used when creating a table.
+   * Can be one of EVEN, KEY or ALL (see Redshift docs).
+   *
+   * When using KEY, you must also set a distribution key with the distkey
+   * option.
+   */
+  def getDistStyle:String =
+    settings.getOrElse(REDSHIFT_STREAM_SETTINGS.REDSHIFT_DIST_STYLE,
+      "EVEN")
 
   def getJdbcDriver:String =
     settings.getOrElse(REDSHIFT_STREAM_SETTINGS.REDSHIFT_JDBC_DRIVER,
@@ -70,6 +96,22 @@ class RedshiftOptions(options: DataSourceOptions) extends Logging {
 
   def getMaxRetries:Int =
     settings.getOrElse(REDSHIFT_STREAM_SETTINGS.REDSHIFT_MAX_RETRIES, "3").toInt
+
+  /**
+   * A full Redshift Sort Key definition.
+   *
+   * Examples include:
+   *
+   * SORTKEY(my_sort_column)
+   * COMPOUND SORTKEY(sort_col_1, sort_col_2)
+   * INTERLEAVED SORTKEY(sort_col_1, sort_col_2)
+   */
+  def getSortKey:Option[String] =
+    settings.get(REDSHIFT_STREAM_SETTINGS.REDSHIFT_SORT_KEY)
+
+  def getTable:String =
+    settings.getOrElse(REDSHIFT_STREAM_SETTINGS.REDSHIFT_TABLE,
+      throw new Exception(s"No Redshift table specified."))
 
   /* User authentication */
 

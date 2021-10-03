@@ -130,7 +130,12 @@ case class RedshiftStreamDataWriter(
   private val nullTypes = schema.fields
     .map(field => getNullType(field.dataType))
 
-  validateSchema()
+  /*
+   * Check whether the configured Redshift database
+   * table exists and validate whether the provided
+   * schema is compliant with the database schema
+   */
+  validateTable()
 
   override def abort(): Unit =
     log.info(s"Abort writing with ${buffer.size} records in local buffer.")
@@ -155,8 +160,52 @@ case class RedshiftStreamDataWriter(
   /** REDSHIFT HELPER METHOD **/
 
   private def getNullType(dataType:DataType):Int = ???
+  /**
+   * This method makes sure that the Redshift instance
+   * contains the specified table and schema
+   */
+  private def validateTable(): Unit = {
 
-  private def validateSchema(): Unit = ???
+    conn = RedshiftUtil.getConnection(options)
+    /*
+     * Create the specified table if it does
+     * not exist
+     */
+    if (!RedshiftUtil.createTableIfNotExist(conn, schema, options))
+      throw new Exception(
+        s"Trying to connect to Redshift database creating the provided table (if not exists) failed.")
+    /*
+     * Retrieve the database schema; we expect that
+     * the table exists and its column schema is
+     * available
+     */
+    val fieldSpec = RedshiftUtil.getColumnTypes(conn, options)
+    if (fieldSpec.isEmpty)
+      throw new Exception(
+        s"Trying to retrieve metadata from Redshift database table failed.")
+
+    /*
+     * Compare each schema field and table column;
+     * we expect that the order of fields is the same
+     */
+    val schemaFields = schema.fields
+    schemaFields.indices.foreach(i => {
+
+      val schemaField = schemaFields(i)
+      val (_, tableField)  = fieldSpec(i)
+
+      if (schemaField.name != tableField.name)
+        throw new Exception(s"Schema field name and table column name do not match.")
+
+      if (schemaField.dataType != tableField.dataType)
+        throw new Exception(s"Schema field data type and table column type do not match.")
+
+      if (schemaField.nullable != tableField.nullable)
+        throw new Exception(s"Schema field nullable and table column nullable do not match.")
+
+    })
+
+  }
 
   private def insertValue(
      stmt:PreparedStatement,

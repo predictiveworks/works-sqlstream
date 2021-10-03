@@ -32,6 +32,8 @@ object REDSHIFT_STREAM_SETTINGS {
    */
   val BATCH_SIZE   = "batch.size"
   val REDSHIFT_DATABASE    = "redshift.database"
+  val REDSHIFT_DIST_KEY    = "redshift.dist.key"
+  val REDSHIFT_DIST_STYLE  = "redshift.dist.style"
   val REDSHIFT_HOST        = "redshift.host"
   val REDSHIFT_JDBC_DRIVER = "redshift.jdbc.driver"
   /**
@@ -41,6 +43,8 @@ object REDSHIFT_STREAM_SETTINGS {
   val REDSHIFT_MAX_RETRIES = "redshift.max.retries"
   val REDSHIFT_PASSWORD    = "redshift.password"
   val REDSHIFT_PORT        = "redshift.port"
+  val REDSHIFT_SORT_KEY    = "redshift.sort.key"
+  val REDSHIFT_TABLE       = "redshift.table"
   val REDSHIFT_TIMEOUT     = "redshift.timeout"
   val REDSHIFT_USER        = "redshift.username"
 
