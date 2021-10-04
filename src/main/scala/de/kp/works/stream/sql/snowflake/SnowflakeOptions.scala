@@ -120,6 +120,9 @@ class SnowflakeOptions(options: DataSourceOptions) extends Logging {
    */
     settings.get(SNOWFLAKE_STREAM_SETTINGS.SNOWFLAKE_PASSWORD)
 
+  def getPrimaryKey:Option[String] =
+    settings.get(SNOWFLAKE_STREAM_SETTINGS.SNOWFLAKE_PRIMARY_KEY)
+
   def getPrivateKey:Option[PrivateKey] = {
 
     val fileName = settings.get(SNOWFLAKE_STREAM_SETTINGS.SNOWFLAKE_PRIVATE_KEY)
@@ -153,6 +156,10 @@ class SnowflakeOptions(options: DataSourceOptions) extends Logging {
   def getSsl:String =
     settings.getOrElse(SNOWFLAKE_STREAM_SETTINGS.SNOWFLAKE_SSL,
       "on")
+
+  def getTable:String =
+    settings.getOrElse(SNOWFLAKE_STREAM_SETTINGS.SNOWFLAKE_TABLE,
+      throw new Exception(s"No Snowflake table specified."))
 
   def getToken:Option[String] =
   /* The OAuth token */

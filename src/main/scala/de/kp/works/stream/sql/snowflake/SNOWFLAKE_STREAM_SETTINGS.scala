@@ -69,12 +69,14 @@ object SNOWFLAKE_STREAM_SETTINGS {
    * to a Snowflake instance
    */
   val SNOWFLAKE_MAX_RETRIES   = "snowflake.max.retries"
+  val SNOWFLAKE_PRIMARY_KEY   = "snowflake.primary.key"
   val SNOWFLAKE_ROLE          = "snowflake.role"
   val SNOWFLAKE_SCHEMA        = "snowflake.schema"
   /**
    * Snowflake SSL on/off - "on" by default
    */
   val SNOWFLAKE_SSL           = "snowflake.ssl"
+  val SNOWFLAKE_TABLE         = "snowflake.table"
   val SNOWFLAKE_TIMEOUT       = "snowflake.timeout"
   val SNOWFLAKE_USER          = "snowflake.user"
   val SNOWFLAKE_WAREHOUSE     = "snowflake.warehouse"

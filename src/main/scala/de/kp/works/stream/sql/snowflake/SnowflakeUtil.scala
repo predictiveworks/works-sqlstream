@@ -19,11 +19,149 @@ package de.kp.works.stream.sql.snowflake
  */
 
 import de.kp.works.stream.sql.jdbc.JdbcUtil
+import org.apache.spark.sql.types._
 
-import java.sql.Connection
+import java.sql.{Connection, Statement}
 import java.util.Properties
 
 object SnowflakeUtil extends JdbcUtil {
+  /**
+   * Compute the Snowflake SQL schema string for the
+   * given Spark SQL Schema.
+   */
+  def buildSqlSchema(schema: StructType, options:SnowflakeOptions): String = {
+
+    var sqlSchema = schema.fields.map { field => {
+
+      val fname = ensureQuoted(field.name)
+      /*
+       * Retrieve corresponding Snowflake data type
+       * giving a Spark SQL data type
+       */
+      val ftype = field.dataType match {
+        /*
+         * Primitive data types
+         */
+        case BinaryType     =>
+          if (field.metadata.contains("maxlength")) {
+            s"BINARY(${field.metadata.getLong("maxlength")})"
+          } else {
+            "BINARY"
+          }
+        case BooleanType    => "BOOLEAN"
+        case ByteType       => "INTEGER" // Snowflake does not support the BYTE type.
+        case DateType       => "DATE"
+        case t: DecimalType => s"DECIMAL(${t.precision},${t.scale})"
+        case DoubleType     => "DOUBLE"
+        case FloatType      => "FLOAT"
+        case IntegerType    => "INTEGER"
+        case LongType       => "INTEGER"
+        case ShortType      => "INTEGER"
+        case StringType     =>
+          if (field.metadata.contains("maxlength")) {
+            s"VARCHAR(${field.metadata.getLong("maxlength")})"
+          } else {
+            "STRING"
+          }
+        case TimestampType  => "TIMESTAMP"
+        /*
+         * Complex data types
+         */
+        case _: ArrayType   => "VARIANT"
+        case _: MapType     => "VARIANT"
+        case _: StructType  => "VARIANT"
+        case _ =>
+          throw new IllegalArgumentException(
+            s"Don't know how to save $field of type ${field.name} to Snowflake")
+      }
+
+      val nullable = if (field.nullable) "" else "NOT NULL"
+      s"""$fname $ftype $nullable"""
+
+    }}.mkString(", ")
+
+    if (options.getPrimaryKey.isEmpty) return sqlSchema
+    val primaryKey = ensureQuoted(options.getPrimaryKey.get)
+
+    sqlSchema = sqlSchema + s", PRIMARY KEY($primaryKey)"
+    sqlSchema
+
+  }
+  /**
+   * Create a `table` in a Snowflake database with respect
+   * to the provided (DataFrame) schema, if the table does
+   * not exist
+   */
+  def createTableIfNotExist(conn: Connection, schema: StructType, options: SnowflakeOptions): Boolean = {
+
+    val createSql = createTableSql(schema, options)
+
+    var stmt: Statement = null
+    var success: Boolean = false
+
+    try {
+
+      conn.setAutoCommit(false)
+
+      stmt = conn.createStatement()
+      stmt.execute(createSql)
+
+      conn.commit()
+      success = true
+
+    } catch {
+      case _: Throwable => /* Do nothing */
+
+    } finally {
+
+      if (stmt != null)
+        try {
+          stmt.close()
+
+        } catch {
+          case _: Throwable => /* Do nothing */
+        }
+    }
+
+    success
+
+  }
+
+  /**
+   * Generate CREATE TABLE statement for Snowflake
+   */
+  def createTableSql(schema: StructType, options: SnowflakeOptions): String = {
+
+    val table = options.getTable
+    /*
+     * Build the Snowflake compliant SQL schema
+     * from the provided schema
+     */
+    val sqlSchema = buildSqlSchema(schema, options)
+    s"CREATE TABLE IF NOT EXISTS $table ($sqlSchema)"
+
+  }
+  /**
+   * The INSERT SQL statement is built from the provided
+   * schema specification as the Snowflake stream writer
+   * ensures that table schema and provided schema are
+   * identical
+   */
+  def createInsertSql(schema:StructType, options:SnowflakeOptions): String = {
+
+    val table = options.getTable
+
+    val columns = schema.fields
+      .map(field =>
+        ensureQuoted(field.name))
+      .mkString(",")
+
+    val values = schema.fields.map(_ => "?").mkString(",")
+    val insertSql = s"INSERT INTO $table ($columns) VALUES($values)"
+
+    insertSql
+
+  }
 
   override def getDriverClassName(jdbcDriverName:String): String = {
     jdbcDriverName match {
@@ -115,4 +253,34 @@ object SnowflakeUtil extends JdbcUtil {
      driver.connect(url, jdbcProperties)
 
   }
+
+  /** HELPER METHODS **/
+
+  /**
+   * This method check whether a name is quoted
+   */
+  private def isQuoted(name: String): Boolean = {
+    name.startsWith("\"") && name.endsWith("\"")
+  }
+  /**
+   * This method wraps a name with double quotes
+   */
+  private def ensureQuoted(name: String): String = {
+    if (isQuoted(name)) name
+    else {
+      /*
+       * If the input identifier is legal, uppercase
+       * before wrapping it with double quotes
+       */
+      if (name.matches("[_a-zA-Z]([_0-9a-zA-Z])*")) {
+        "\"" + name.toUpperCase + "\""
+
+      } else {
+        "\"" + name + "\""
+      }
+
+    }
+
+  }
+
 }

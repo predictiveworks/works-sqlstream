@@ -185,7 +185,7 @@ object RedshiftUtil extends JdbcUtil {
       }
 
       fname = fname.replace("\"", "\\\"")
-      s"$fname $ftype $nullable $encoding".trim
+      s"""$fname $ftype $nullable $encoding""".trim
 
     }}.mkString(", ")
 
@@ -193,7 +193,7 @@ object RedshiftUtil extends JdbcUtil {
     val primaryKey = options.getPrimaryKey.get
       .replace("\"", "\\\"")
 
-    sqlSchema = sqlSchema + s", PRIMARY KEY($primaryKey)"
+    sqlSchema = sqlSchema + s""", PRIMARY KEY($primaryKey)"""
     sqlSchema
 
   }

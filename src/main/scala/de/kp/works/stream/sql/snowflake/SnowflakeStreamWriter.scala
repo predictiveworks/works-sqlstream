@@ -26,7 +26,7 @@ import org.apache.spark.sql.sources.v2.writer.{DataWriter, DataWriterFactory, Wr
 import org.apache.spark.sql.streaming.OutputMode
 import org.apache.spark.sql.types._
 
-import java.sql.{Connection, PreparedStatement, SQLException}
+import java.sql.{Connection, JDBCType, PreparedStatement, SQLException}
 import scala.collection.mutable.ArrayBuffer
 /**
  * Dummy commit message. The DataSourceV2 framework requires
@@ -118,7 +118,8 @@ case class SnowflakeStreamDataWriter(
    * ensures that table schema and provided schema are
    * identical
    */
-  private val sql:String = ???
+  private val sql:String =
+    SnowflakeUtil.createInsertSql(schema, options)
 
   private val maxRetries = options.getMaxRetries
   private val timeoutSeconds = options.getConnectionTimeout
@@ -171,11 +172,118 @@ case class SnowflakeStreamDataWriter(
   private def validate(): Unit = {
 
     conn = SnowflakeUtil.getConnection(options)
+    /*
+     * Create the specified table if it does
+     * not exist
+     */
+    if (!SnowflakeUtil.createTableIfNotExist(conn, schema, options))
+      throw new Exception(
+        s"Trying to connect to Snowflake database creating the provided table (if not exists) failed.")
+    /*
+     * Retrieve the database schema; we expect that
+     * the table exists and its column schema is
+     * available
+     */
+    fieldSpec = SnowflakeUtil.getColumnTypes(conn, options.getTable)
+    if (fieldSpec.isEmpty)
+      throw new Exception(
+        s"Trying to retrieve metadata from Snowflake database table failed.")
 
-    ???
+    /*
+     * Compare each schema field and table column;
+     * we expect that the order of fields is the same
+     */
+    val schemaFields = schema.fields
+    schemaFields.indices.foreach(i => {
+
+      val schemaField = schemaFields(i)
+      val (_, tableField)  = fieldSpec(i)
+
+      if (schemaField.name != tableField.name)
+        throw new Exception(s"Schema field name and table column name do not match.")
+
+      if (schemaField.dataType != tableField.dataType)
+        throw new Exception(s"Schema field data type and table column type do not match.")
+
+      if (schemaField.nullable != tableField.nullable)
+        throw new Exception(s"Schema field nullable and table column nullable do not match.")
+
+    })
+
   }
 
-  private def insertValue(stmt:PreparedStatement, row:Row, pos:Int):Unit = ???
+  private def insertValue(stmt:PreparedStatement, row:Row, pos:Int):Unit = {
+    /*
+     * Retrieve field specification that refers to the
+     * provided position; the implementation is taken
+     * from Apache Spark Sql JdbcUtils
+     */
+    val (_, field) = fieldSpec(pos)
+    field.dataType match {
+      /*
+       * Primitive data types
+       */
+      case BinaryType =>
+        stmt.setBytes(pos + 1, row.getAs[Array[Byte]](pos))
+      case BooleanType =>
+        stmt.setBoolean(pos + 1, row.getBoolean(pos))
+      case ByteType =>
+        stmt.setByte(pos + 1, row.getByte(pos))
+      case DateType =>
+        stmt.setDate(pos + 1, row.getAs[java.sql.Date](pos))
+      case _: DecimalType =>
+        stmt.setBigDecimal(pos + 1, row.getDecimal(pos))
+      case DoubleType =>
+        stmt.setDouble(pos + 1, row.getDouble(pos))
+      case FloatType =>
+        stmt.setFloat(pos + 1, row.getFloat(pos))
+      case IntegerType =>
+        stmt.setInt(pos + 1, row.getInt(pos))
+      case LongType =>
+        stmt.setLong(pos + 1, row.getLong(pos))
+      case ShortType =>
+        stmt.setInt(pos + 1, row.getInt(pos))
+      case StringType =>
+        stmt.setString(pos + 1, row.getString(pos))
+      case TimestampType =>
+        stmt.setTimestamp(pos + 1, row.getAs[java.sql.Timestamp](pos))
+      /*
+       * Complex data types
+       */
+      case ArrayType(ct, _) =>
+      val values = row.getSeq[AnyRef](pos).toArray
+      val typeName = ct match {
+        case BooleanType =>
+          JDBCType.BOOLEAN.getName
+        case ByteType =>
+          JDBCType.TINYINT.getName
+        case DateType =>
+          JDBCType.DATE.getName
+        case _:DecimalType =>
+          JDBCType.DECIMAL.getName
+        case DoubleType =>
+          JDBCType.DOUBLE.getName
+        case FloatType =>
+          JDBCType.FLOAT.getName
+        case IntegerType =>
+          JDBCType.INTEGER.getName
+        case LongType =>
+          JDBCType.BIGINT.getName
+        case StringType =>
+          JDBCType.VARCHAR.getName
+        case TimestampType =>
+          JDBCType.TIMESTAMP.getName
+        case _ =>
+          throw new Exception(s"Component type `${ct.simpleString}` is not supported.")
+      }
+      val array = conn.createArrayOf(typeName, values)
+      stmt.setArray(pos + 1, array)
+
+    case _ =>
+      throw new Exception(s"Data type `${field.dataType.simpleString}` is not supported.")
+    }
+
+  }
 
   private def resetConnAndStmt(): Unit = {
     /*
