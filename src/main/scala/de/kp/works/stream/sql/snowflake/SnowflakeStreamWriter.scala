@@ -26,7 +26,7 @@ import org.apache.spark.sql.sources.v2.writer.{DataWriter, DataWriterFactory, Wr
 import org.apache.spark.sql.streaming.OutputMode
 import org.apache.spark.sql.types._
 
-import java.sql.{Connection, PreparedStatement}
+import java.sql.{Connection, PreparedStatement, SQLException}
 import scala.collection.mutable.ArrayBuffer
 /**
  * Dummy commit message. The DataSourceV2 framework requires
@@ -112,6 +112,35 @@ case class SnowflakeStreamDataWriter(
 
   private var conn: Connection = _
   private var stmt: PreparedStatement = _
+  /*
+   * The INSERT SQL statement is built from the provided
+   * schema specification as the Snowflake stream writer
+   * ensures that table schema and provided schema are
+   * identical
+   */
+  private val sql:String = ???
+
+  private val maxRetries = options.getMaxRetries
+  private val timeoutSeconds = options.getConnectionTimeout
+
+  /*
+   * Extract schema meta information
+   */
+  private val numFields = schema.fields.length
+  /*
+   * The field specification combines a JDBC SQL type
+   * and its SQL data type counterpart. It is retrieved
+   * while validating the provided table and schema and
+   * is used to fill prepared statements
+   */
+  private var fieldSpec:Seq[(Int, StructField)] = _
+
+  /*
+   * Check whether the configured Snowflake database
+   * table exists and validate whether the provided
+   * schema is compliant with the database schema
+   */
+  validate()
 
   override def abort(): Unit =
     log.info(s"Abort writing with ${buffer.size} records in local buffer.")
@@ -121,17 +150,144 @@ case class SnowflakeStreamDataWriter(
     SnowflakeWriterCommitMessage
   }
 
-  override def write(t: InternalRow): Unit = ???
+  override def write(record: InternalRow): Unit = {
+
+    buffer.append(Row.fromSeq(record.copy().toSeq(schema)))
+    if (buffer.size == bufferSize) {
+
+      log.debug(s"Local buffer is full with size $bufferSize, do write and reset local buffer.")
+      doWriteAndResetBuffer()
+
+    }
+
+  }
 
   /** SNOWFLAKE HELPER METHOD **/
+
+  /**
+   * This method makes sure that the Snowflake instance
+   * contains the specified table and schema
+   */
+  private def validate(): Unit = {
+
+    conn = SnowflakeUtil.getConnection(options)
+
+    ???
+  }
+
+  private def insertValue(stmt:PreparedStatement, row:Row, pos:Int):Unit = ???
+
+  private def resetConnAndStmt(): Unit = {
+    /*
+     * Use a local connection cache, to avoid
+     * getting a new connection every time.
+     */
+    if (conn == null || !conn.isValid(timeoutSeconds)) {
+
+      conn = SnowflakeUtil.getConnection(options)
+      stmt = conn.prepareStatement(sql)
+
+      log.info("Current connection is invalid, create a new one.")
+
+    } else {
+      log.debug("Current connection is valid, reuse it.")
+    }
+  }
 
   /**
    * This method performs a bath write to JDBC
    * and a retry in case of a SQLException
    */
-  private def doWriteAndResetBuffer(): Unit = ???
+  private def doWriteAndResetBuffer(): Unit = {
 
-  private def doWriteAndClose():Unit = ???
+    resetConnAndStmt()
+
+    var numRetries = 0
+    val size = buffer.size
+
+    while (numRetries <= maxRetries) {
+
+      try {
+
+        val start = System.currentTimeMillis()
+        val iterator = buffer.iterator
+
+        while (iterator.hasNext) {
+          val row = iterator.next()
+          var i = 0
+          while (i < numFields) {
+            /*
+             * Fill prepared SQL statement with row values
+             */
+            if (row.isNullAt(i)) {
+              val (sqlType, _) = fieldSpec(i)
+              stmt.setNull(i + 1, sqlType)
+            }
+            else
+              insertValue(stmt, row, i)
+
+            i += 1
+
+          }
+
+          stmt.addBatch()
+
+        }
+        stmt.executeBatch()
+        buffer.clear()
+
+        log.debug(s"Successful write of $size records,"
+          + s"with retry number $numRetries, cost ${System.currentTimeMillis() - start} ms")
+
+        /* Abort condition for while loop */
+        numRetries = maxRetries + 1
+
+      } catch {
+        case e: SQLException =>
+          if (numRetries <= maxRetries) {
+            numRetries += 1
+            resetConnAndStmt()
+
+            log.warn(s"Failed to write $size records, retry number $numRetries!", e)
+
+          } else {
+            log.error(s"Failed to write $size records,"
+              + s"reach max retry number $maxRetries, abort writing!")
+
+            throw e
+          }
+
+        case t: Throwable =>
+          log.error(s"Failed to write $size records, not suited for retry , writing to Redshift aborted.", t)
+          throw t
+      }
+
+    }
+
+  }
+
+  /**
+   * This method write remaining buffer entries
+   * to the Snowflake database and then clears
+   * the buffer and closes the JDBC connection
+   */
+  private def doWriteAndClose():Unit = {
+
+    if (buffer.nonEmpty) {
+      doWriteAndResetBuffer()
+    }
+
+    if (conn != null) {
+      try {
+        conn.close()
+
+      } catch {
+        case t: Throwable =>
+          log.error("Close connection with exception", t)
+      }
+    }
+
+  }
 
 }
 

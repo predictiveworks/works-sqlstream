@@ -64,12 +64,18 @@ object SNOWFLAKE_STREAM_SETTINGS {
    * The file name where to find the PEM private key
    */
   val SNOWFLAKE_PRIVATE_KEY   = "snowflake.private.key"
+  /**
+   * The maximum number of retries to write
+   * to a Snowflake instance
+   */
+  val SNOWFLAKE_MAX_RETRIES   = "snowflake.max.retries"
   val SNOWFLAKE_ROLE          = "snowflake.role"
   val SNOWFLAKE_SCHEMA        = "snowflake.schema"
   /**
    * Snowflake SSL on/off - "on" by default
    */
   val SNOWFLAKE_SSL           = "snowflake.ssl"
+  val SNOWFLAKE_TIMEOUT       = "snowflake.timeout"
   val SNOWFLAKE_USER          = "snowflake.user"
   val SNOWFLAKE_WAREHOUSE     = "snowflake.warehouse"
 

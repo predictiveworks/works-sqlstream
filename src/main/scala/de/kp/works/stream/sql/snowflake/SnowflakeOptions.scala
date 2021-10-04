@@ -56,13 +56,6 @@ class SnowflakeOptions(options: DataSourceOptions) extends Logging {
     ""
   }
 
-  def getBatchSize:Int =
-    settings.getOrElse(SNOWFLAKE_STREAM_SETTINGS.BATCH_SIZE, "1000").toInt
-
-  def getJdbcDriver:String =
-    settings.getOrElse(SNOWFLAKE_STREAM_SETTINGS.JDBC_DRIVER,
-      SNOWFLAKE_STREAM_SETTINGS.DEFAULT_JDBC_DRIVER_NAME)
-
   def getAccount:String =
     settings.getOrElse(SNOWFLAKE_STREAM_SETTINGS.SNOWFLAKE_ACCOUNT,
       throw new Exception(s"No Snowflake account name specified."))
@@ -86,6 +79,21 @@ class SnowflakeOptions(options: DataSourceOptions) extends Logging {
 
   }
 
+  def getBatchSize:Int =
+    settings.getOrElse(SNOWFLAKE_STREAM_SETTINGS.BATCH_SIZE, "1000").toInt
+
+  /**
+   * The connection timeout is specified in seconds
+   * and defaults to 10
+   */
+  def getConnectionTimeout:Int =
+    settings.getOrElse(SNOWFLAKE_STREAM_SETTINGS.SNOWFLAKE_TIMEOUT, "10").toInt
+
+  def getDatabase:String =
+    /* The name of the Snowflake database */
+    settings.getOrElse(SNOWFLAKE_STREAM_SETTINGS.SNOWFLAKE_DATABASE,
+      throw new Exception(s"No Snowflake database name specified."))
+
   def getDatabaseUrl:String = {
     /*
      * The connection url to a Snowflake cloud instance
@@ -98,10 +106,12 @@ class SnowflakeOptions(options: DataSourceOptions) extends Logging {
 
   }
 
-  def getDatabase:String =
-    /* The name of the Snowflake database */
-    settings.getOrElse(SNOWFLAKE_STREAM_SETTINGS.SNOWFLAKE_DATABASE,
-      throw new Exception(s"No Snowflake database name specified."))
+  def getJdbcDriver:String =
+    settings.getOrElse(SNOWFLAKE_STREAM_SETTINGS.JDBC_DRIVER,
+      SNOWFLAKE_STREAM_SETTINGS.DEFAULT_JDBC_DRIVER_NAME)
+
+  def getMaxRetries:Int =
+    settings.getOrElse(SNOWFLAKE_STREAM_SETTINGS.SNOWFLAKE_MAX_RETRIES, "3").toInt
 
   def getPassword:Option[String] =
   /*

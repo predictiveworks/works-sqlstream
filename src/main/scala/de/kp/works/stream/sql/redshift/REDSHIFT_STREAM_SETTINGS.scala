@@ -38,7 +38,7 @@ object REDSHIFT_STREAM_SETTINGS {
   val REDSHIFT_JDBC_DRIVER = "redshift.jdbc.driver"
   /**
    * The maximum number of retries to write
-   * to A Redshift instance
+   * to a Redshift instance
    */
   val REDSHIFT_MAX_RETRIES = "redshift.max.retries"
   val REDSHIFT_PASSWORD    = "redshift.password"
