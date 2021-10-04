@@ -18,16 +18,14 @@ package de.kp.works.stream.sql.saphana
  *
  */
 
-import org.apache.spark.sql.execution.datasources.jdbc.DriverRegistry
+import de.kp.works.stream.sql.jdbc.JdbcUtil
 
-import java.sql.{Connection, Driver, DriverManager, ResultSet, Statement}
+import java.sql.Connection
 import java.util.Properties
-import scala.collection.JavaConverters._
-import scala.collection.mutable
 
-object HanaUtil {
+object HanaUtil extends JdbcUtil {
 
-  def getDriverClassName(jdbcDriverName:String): String = {
+  override def getDriverClassName(jdbcDriverName:String): String = {
     jdbcDriverName match {
       case "com.sap.db.jdbc.Driver" =>
         classForName(jdbcDriverName).getName
@@ -37,50 +35,9 @@ object HanaUtil {
     }
   }
 
-  def classForName(className: String): Class[_] = {
-
-    val classLoader =
-      Option(Thread.currentThread().getContextClassLoader).getOrElse(this.getClass.getClassLoader)
-
-    Class.forName(className, true, classLoader)
-
-  }
-
   def getConnection(options:HanaOptions): Connection = {
 
-    val driverClassName = getDriverClassName(options.getJdbcDriver)
-    DriverRegistry.register(driverClassName)
-
-    val driverWrapperClass: Class[_] =
-      classForName("org.apache.spark.sql.execution.datasources.jdbc.DriverWrapper")
-
-    def getWrapped(d: Driver): Driver = {
-
-      require(driverWrapperClass.isAssignableFrom(d.getClass))
-      driverWrapperClass.getDeclaredMethod("wrapped").invoke(d).asInstanceOf[Driver]
-
-    }
-    /*
-     * Note that we purposely don't call #DriverManager.getConnection() here:
-     * we want to ensure that an explicitly-specified user-provided driver
-     * class can take precedence over the default class, but
-     *
-     *                 #DriverManager.getConnection()
-     *
-     * might return a according to a different precedence. At the same time,
-     * we don't want to create a driver-per-connection, so we use the DriverManager's
-     * driver instances to handle that singleton logic for us.
-     */
-    val driver: Driver = DriverManager.getDrivers.asScala
-      .collectFirst {
-        case d if driverWrapperClass.isAssignableFrom(d.getClass)
-          && getWrapped(d).getClass.getCanonicalName == driverClassName => d
-        case d if d.getClass.getCanonicalName == driverClassName => d
-      }.getOrElse {
-      throw new IllegalArgumentException(
-        s"Did not find registered SAP HANA driver with class $driverClassName")
-    }
-
+    val driver = getDriver(options.getJdbcDriver)
     var url = s"jdbc:sap://${options.getDatabaseUrl}"
 
     /* User authentication */
@@ -100,51 +57,6 @@ object HanaUtil {
     }
 
     driver.connect(url, authProps)
-
-  }
-  /**
-   * This method checks whether the provided Redshift
-   * table exists and if, returns the column metadata
-   * representation to merge with the Spark SQL schema
-   */
-  def getColumnTypes(conn:Connection, tableName:String):Seq[Int] = {
-
-    var stmt:Statement = null
-    val columnTypes = mutable.ArrayBuffer.empty[Int]
-
-    try {
-
-      stmt = conn.createStatement()
-      /*
-       * Run a query against the database table that returns 0 records,
-       * but returns valid ResultSetMetadata that can be used to optimize
-       * write requests to the Redshift database
-       */
-      val rs:ResultSet = stmt.executeQuery(s"SELECT * FROM $tableName WHERE 1 = 0")
-      val rsMetadata = rs.getMetaData
-
-      val columnCount = rsMetadata.getColumnCount
-      (0 until columnCount).foreach(i =>
-        columnTypes += rsMetadata.getColumnType(i + 1)
-      )
-
-    } catch {
-      case _:Throwable => /* Do nothing */
-
-
-    } finally {
-
-      if (stmt != null)
-        try {
-          stmt.close()
-
-        } catch {
-          case _:Throwable => /* Do nothing */
-        }
-
-    }
-
-    columnTypes
 
   }
 

@@ -26,11 +26,51 @@ object SNOWFLAKE_STREAM_SETTINGS {
    * The driver name of the Jdbc driver used to
    * connect and access Snowflake
    */
-  val DEFAULT_JDBC_DRIVER_NAME = "com.snowflake.client.jdbc.SnowflakeDriver"
+  val DEFAULT_JDBC_DRIVER_NAME = "net.snowflake.client.jdbc.SnowflakeDriver"
   /**
    * The maximum batch size of the internal cache
    * before writing to Snowflake
    */
   val BATCH_SIZE = "batch.size"
   val JDBC_DRIVER = "jdbc.driver"
+
+  val SNOWFLAKE_ACCOUNT       = "snowflake.account"
+  /**
+   * Specifies the authenticator to use for verifying
+   * user login credentials. You can set this to one
+   * of the following values:
+   *
+   * - `snowflake`        - use the internal Snowflake authenticator (default)
+   *
+   * - `externalbrowser`  - use your web browser to authenticate with Okta, ADFS,
+   *                        or any other SAML 2.0-compliant identity provider (IdP)
+   *                        that has been defined for your Snowflake account.
+   *
+   * - `oauth`            - to authenticate using OAuth. When OAuth is specified
+   *                        as the authenticator, you must also set the token parameter
+   *                        to specify the OAuth token.
+   *
+   * - snowflake_jwt      - to authenticate using key pair authentication.
+   *
+   * - username_password_mfa - to authenticate with MFA token caching.
+
+   *
+   */
+  val SNOWFLAKE_AUTHENTICATOR = "snowflake.authenticator"
+  val SNOWFLAKE_DATABASE      = "snowflake.database"
+  val SNOWFLAKE_OAUTH_TOKEN   = "snowflake.oauth.token"
+  val SNOWFLAKE_PASSWORD      = "snowflake.password"
+  /**
+   * The file name where to find the PEM private key
+   */
+  val SNOWFLAKE_PRIVATE_KEY   = "snowflake.private.key"
+  val SNOWFLAKE_ROLE          = "snowflake.role"
+  val SNOWFLAKE_SCHEMA        = "snowflake.schema"
+  /**
+   * Snowflake SSL on/off - "on" by default
+   */
+  val SNOWFLAKE_SSL           = "snowflake.ssl"
+  val SNOWFLAKE_USER          = "snowflake.user"
+  val SNOWFLAKE_WAREHOUSE     = "snowflake.warehouse"
+
 }

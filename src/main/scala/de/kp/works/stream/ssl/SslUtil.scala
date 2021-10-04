@@ -150,7 +150,7 @@ object SslUtil {
   def getCertFileKeyManagerFactory(crtFile: String, keyFile: String, password: String): KeyManagerFactory = {
 
     val cert = getX509CertFromPEM(crtFile)
-    val privateKey = getPrivateKeyFromPEM(keyFile, password)
+    val privateKey = getPrivateKeyFromPEM(keyFile, Some(password))
 
     getCertKeyManagerFactory(cert, privateKey, password)
 
@@ -262,7 +262,7 @@ object SslUtil {
 
   /** *** PRIVATE KEY **** */
 
-  def getPrivateKeyFromPEM(keyFile: String, password: String): PrivateKey = {
+  def getPrivateKeyFromPEM(keyFile: String, password: Option[String]): PrivateKey = {
 
     val bytes = Files.readAllBytes(Paths.get(keyFile))
     val bais = new ByteArrayInputStream(bytes)
@@ -275,9 +275,9 @@ object SslUtil {
     var keyPair:PEMKeyPair = null
     keyObject match {
       case pair: PEMEncryptedKeyPair =>
-        if (password == null)
+        if (password.isEmpty)
           throw new Exception("[ERROR] Reading private key from file without password is not supported.")
-        val passwordArray = password.toCharArray
+        val passwordArray = password.get.toCharArray
         val provider = new JcePEMDecryptorProviderBuilder().build(passwordArray)
         keyPair = pair.decryptKeyPair(provider)
       case _ => keyPair = keyObject.asInstanceOf[PEMKeyPair]

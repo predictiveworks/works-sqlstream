@@ -18,7 +18,7 @@ package de.kp.works.stream.sql.mqtt.hivemq
  *
  */
 
-import com.hivemq.client.internal.mqtt.MqttRxClientBuilder
+import com.hivemq.client.internal.mqtt.{MqttClientSslConfigImplBuilder, MqttRxClientBuilder}
 import com.hivemq.client.internal.mqtt.message.auth.MqttSimpleAuthBuilder
 import com.hivemq.client.internal.mqtt.message.auth.mqtt3.Mqtt3SimpleAuthViewBuilder
 import com.hivemq.client.internal.mqtt.mqtt3.Mqtt3RxClientViewBuilder
@@ -447,7 +447,7 @@ class HiveClient(
       Security.addProvider(new BouncyCastleProvider())
 
       val sslOptions = mqttSsl.get
-      val builder = MqttClientSslConfig.builder()
+      val builder = new MqttClientSslConfigImplBuilder.Default()
 
       /* CipherSuites */
       val cipherSuites = sslOptions.getCipherSuites

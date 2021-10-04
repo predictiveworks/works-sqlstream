@@ -189,7 +189,7 @@ case class RedshiftStreamDataWriter(
      * the table exists and its column schema is
      * available
      */
-    fieldSpec = RedshiftUtil.getColumnTypes(conn, options)
+    fieldSpec = RedshiftUtil.getColumnTypes(conn, options.getTable)
     if (fieldSpec.isEmpty)
       throw new Exception(
         s"Trying to retrieve metadata from Redshift database table failed.")
