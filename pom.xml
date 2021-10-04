@@ -19,6 +19,8 @@
         <maven.compiler.source>1.8</maven.compiler.source>
         <maven.compiler.target>1.8</maven.compiler.target>
 
+        <akka.http.version>10.1.14</akka.http.version>
+        <akka.stream.version>2.5.31</akka.stream.version>
         <bouncycastle.version>1.68</bouncycastle.version>
         <config.version>1.4.1</config.version>
         <ditto.version>1.0.0</ditto.version>
@@ -28,7 +30,15 @@
         <okhttp.version>3.14.4</okhttp.version>
         <paho.version>1.2.2</paho.version>
         <rocksdb.version>6.6.4</rocksdb.version>
+        <scopt.version>4.0.0</scopt.version>
         <snowflake.version>3.13.8</snowflake.version>
+
+        <!--
+        The Scala version that has been used for testing
+        in 2.11.12
+        -->
+        <scala.binary.version>2.11</scala.binary.version>
+
         <!--
         Leveraging this project in a Google CDAP environment
         requires this version of Apache Spark
@@ -37,6 +47,20 @@
     </properties>
 
     <dependencies>
+
+        <!-- AKKA
+        -->
+        <dependency>
+            <groupId>com.typesafe.akka</groupId>
+            <artifactId>akka-http_${scala.binary.version}</artifactId>
+            <version>${akka.http.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.typesafe.akka</groupId>
+            <artifactId>akka-stream_${scala.binary.version}</artifactId>
+            <version>${akka.stream.version}</version>
+        </dependency>
 
         <!-- BOUNCY CASTLE
         -->
@@ -114,7 +138,7 @@
         -->
         <dependency>
             <groupId>org.apache.spark</groupId>
-            <artifactId>spark-sql_2.11</artifactId>
+            <artifactId>spark-sql_${scala.binary.version}</artifactId>
             <version>${spark.version}</version>
             <scope>provided</scope>
         </dependency>
@@ -125,6 +149,14 @@
             <groupId>net.snowflake</groupId>
             <artifactId>snowflake-jdbc</artifactId>
             <version>${snowflake.version}</version>
+        </dependency>
+
+        <!-- SCOPT
+        -->
+        <dependency>
+            <groupId>com.github.scopt</groupId>
+            <artifactId>scopt_${scala.binary.version}</artifactId>
+            <version>${scopt.version}</version>
         </dependency>
 
     </dependencies>
