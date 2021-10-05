@@ -18,20 +18,22 @@ package de.kp.works.stream.sql.exasol
  *
  */
 
+import de.kp.works.stream.sql.jdbc.JdbcUtil
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.types._
 
-import java.sql.{Connection, PreparedStatement}
+import java.sql.{Connection, PreparedStatement, Statement}
+import java.util.Properties
 import scala.util.Try
 
-object ExasolUtil {
+object ExasolUtil extends JdbcUtil {
   /**
    * Compute the SAP HANA SQL schema string for the
    * given Spark SQL Schema.
    */
   def buildSqlSchema(schema: StructType, options:ExasolOptions): String = {
 
-    val sqlSchema = schema.fields.map { field => {
+    var sqlSchema = schema.fields.map { field => {
 
       val fname = field.name
       val ftype = field.dataType match {
@@ -57,10 +59,49 @@ object ExasolUtil {
       s"""$fname $ftype $nullable"""
 
     }}.mkString(", ")
+
+    if (options.getPrimaryKey.isEmpty) return sqlSchema
+    val primaryKey = options.getPrimaryKey.get
+
+    sqlSchema = sqlSchema + s""", PRIMARY KEY($primaryKey)"""
     sqlSchema
 
   }
 
+  def createTableIfNotExist(conn: Connection, schema: StructType, options: ExasolOptions): Boolean = {
+
+    val createSql = createTableSql(schema, options)
+
+    var stmt: Statement = null
+    var success: Boolean = false
+
+    try {
+
+      conn.setAutoCommit(false)
+
+      stmt = conn.createStatement()
+      stmt.execute(createSql)
+
+      conn.commit()
+      success = true
+
+    } catch {
+      case _: Throwable => /* Do nothing */
+
+    } finally {
+
+      if (stmt != null)
+        try {
+          stmt.close()
+
+        } catch {
+          case _: Throwable => /* Do nothing */
+        }
+    }
+
+    success
+
+  }
   /**
    * The INSERT SQL statement is built from the provided
    * schema specification as the Exasol stream writer
@@ -81,8 +122,47 @@ object ExasolUtil {
     insertSql
 
   }
+  /**
+   * Generate CREATE TABLE statement for Exasol
+   */
+  def createTableSql(schema: StructType, options: ExasolOptions): String = {
 
-  def getConnection(options: ExasolOptions): Connection = ???
+    val table = options.getTable
+
+    val sqlSchema = buildSqlSchema(schema, options)
+    s"""CREATE TABLE IF NOT EXISTS $table ($sqlSchema)"""
+
+  }
+
+  def getConnection(options: ExasolOptions): Connection = {
+
+    val driver = getDriver(options.getJdbcDriver)
+    /*
+     * HINT: Exasol JDBC url does not use //
+     */
+    val url = s"jdbc:exa:${options.getDatabaseUrl}"
+    val jdbcProperties = new Properties()
+    /*
+     * User authentication
+     */
+    val (user, pass) = options.getUserAndPass
+
+    jdbcProperties.setProperty("user", user)
+    jdbcProperties.setProperty("password", pass)
+
+    driver.connect(url, jdbcProperties)
+
+  }
+
+  override def getDriverClassName(jdbcDriverName: String): String = {
+    jdbcDriverName match {
+      case "com.exasol.jdbc.EXADriver" =>
+        classForName(jdbcDriverName).getName
+      case _ =>
+        classForName(EXASOL_STREAM_SETTINGS.DEFAULT_JDBC_DRIVER_NAME).getName
+
+    }
+  }
 
   /**
    * This method inserts a stream (column) value into the

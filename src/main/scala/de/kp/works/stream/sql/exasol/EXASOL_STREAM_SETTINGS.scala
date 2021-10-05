@@ -22,15 +22,29 @@ object EXASOL_STREAM_SETTINGS {
 
   val FORMAT = "de.kp.works.stream.sql.exasol.ExasolSinkProvider"
   /**
+   * The driver name of the Jdbc driver used to
+   * connect and access Exasol
+   */
+  val DEFAULT_JDBC_DRIVER_NAME = "com.exasol.jdbc.EXADriver"
+
+  /**
    * The maximum batch size of the internal cache
    * before writing to Exasol
    */
   val BATCH_SIZE = "batch.size"
+
+  val EXASOL_HOST        = "exasol.host"
+  val EXASOL_JDBC_DRIVER = "exasol.jdbc.driver"
   /**
    * The maximum number of retries to write
    * to an Exasol instance
    */
   val EXASOL_MAX_RETRIES = "exasol.max.retries"
+  val EXASOL_PASSWORD    = "exasol.password"
+  val EXASOL_PRIMARY_KEY = "exasol.primary.key"
+  val EXASOL_PORT        = "exasol.port"
+  val EXASOL_TABLE       = "exasol.table"
   val EXASOL_TIMEOUT     = "exasol.timeout"
+  val EXASOL_USER        = "exasol.username"
 
 }

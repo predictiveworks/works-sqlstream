@@ -37,9 +37,50 @@ class ExasolOptions(options: DataSourceOptions) extends Logging {
   def getConnectionTimeout:Int =
     settings.getOrElse(EXASOL_STREAM_SETTINGS.EXASOL_TIMEOUT, "10").toInt
 
+  def getDatabaseUrl:String = {
+
+    val host = settings.getOrElse(EXASOL_STREAM_SETTINGS.EXASOL_HOST,
+      throw new Exception(s"No Exasol host specified."))
+
+    if (host.isEmpty)
+      throw new Exception(s"No Exasol host specified.")
+
+    val port = settings.getOrElse(EXASOL_STREAM_SETTINGS.EXASOL_PORT,
+      throw new Exception(s"No Exasol port specified.")).toInt
+
+    val url = s"$host:$port"
+    url
+
+  }
+
+  def getJdbcDriver:String =
+    settings.getOrElse(EXASOL_STREAM_SETTINGS.EXASOL_JDBC_DRIVER,
+      EXASOL_STREAM_SETTINGS.DEFAULT_JDBC_DRIVER_NAME)
+
   def getMaxRetries:Int =
     settings.getOrElse(EXASOL_STREAM_SETTINGS.EXASOL_MAX_RETRIES, "3").toInt
 
-  def getTable:String = ???
+  def getPrimaryKey:Option[String] =
+    settings.get(EXASOL_STREAM_SETTINGS.EXASOL_PRIMARY_KEY)
+
+  def getTable:String =
+    settings.getOrElse(EXASOL_STREAM_SETTINGS.EXASOL_TABLE,
+      throw new Exception(s"No Exasol table specified."))
+
+  /* User authentication */
+
+  def getUserAndPass:(String, String) = {
+
+    val username =
+      settings.getOrElse(EXASOL_STREAM_SETTINGS.EXASOL_USER,
+        throw new Exception("No Exasol user name specified."))
+
+    val password =
+      settings.getOrElse(EXASOL_STREAM_SETTINGS.EXASOL_PASSWORD,
+        throw new Exception("No Exasol user password specified."))
+
+    (username, password)
+
+  }
 
 }

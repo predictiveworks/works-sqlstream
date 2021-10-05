@@ -174,7 +174,49 @@ case class ExasolStreamDataWriter(
    * This method makes sure that the Exasol instance
    * contains the specified table and schema
    */
-  private def validate(): Unit = ???
+  private def validate(): Unit = {
+
+    conn = ExasolUtil.getConnection(options)
+    /*
+     * Create the specified table if it does
+     * not exist
+     */
+    if (!ExasolUtil.createTableIfNotExist(conn, schema, options))
+      throw new Exception(
+        s"Trying to connect to Exasol database creating the provided table (if not exists) failed.")
+    /*
+     * Retrieve the database schema; we expect that
+     * the table exists and its column schema is
+     * available
+     */
+    fieldSpec = ExasolUtil.getColumnTypes(conn, options.getTable)
+    if (fieldSpec.isEmpty)
+      throw new Exception(
+        s"Trying to retrieve metadata from Exasol database table failed.")
+
+    /*
+     * Compare each schema field and table column;
+     * we expect that the order of fields is the same
+     */
+    val schemaFields = schema.fields
+    schemaFields.indices.foreach(i => {
+
+      val schemaField = schemaFields(i)
+      val (_, tableField)  = fieldSpec(i)
+
+      if (schemaField.name != tableField.name)
+        throw new Exception(s"Schema field name and table column name do not match.")
+
+      if (schemaField.dataType != tableField.dataType)
+        throw new Exception(s"Schema field data type and table column type do not match.")
+
+      if (schemaField.nullable != tableField.nullable)
+        throw new Exception(s"Schema field nullable and table column nullable do not match.")
+
+    })
+
+
+  }
 
   private def insertValue(stmt:PreparedStatement, row:Row, pos:Int):Unit = {
     val (_, field) = fieldSpec(pos)
