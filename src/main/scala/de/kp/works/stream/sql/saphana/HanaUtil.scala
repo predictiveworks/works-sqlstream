@@ -20,7 +20,7 @@ package de.kp.works.stream.sql.saphana
 
 import de.kp.works.stream.sql.jdbc.JdbcUtil
 import org.apache.spark.sql.Row
-import org.apache.spark.sql.types.{DataType, StructType}
+import org.apache.spark.sql.types._
 
 import java.sql.{Connection, PreparedStatement, Statement}
 import java.util.Properties
@@ -33,7 +33,41 @@ object HanaUtil extends JdbcUtil {
    */
   def buildSqlSchema(schema: StructType, options:HanaOptions): String = {
 
-    ???
+    val sqlSchema = schema.fields.map { field => {
+
+      val fname = field.name
+      val ftype = field.dataType match {
+        case BinaryType     =>
+          if (field.metadata.contains("maxlength")) {
+            s"VARBINARY(${field.metadata.getLong("maxlength")})"
+          } else {
+            "VARBINARY(8192)"
+          }
+        case BooleanType    => "BOOLEAN"
+        case ByteType       => "TINYINT" // SAP HANA does not support the BYTE type.
+        case t: DecimalType => s"DECIMAL(${t.precision},${t.scale})"
+        case DateType       => "DATE"
+        case DoubleType     => "DOUBLE"
+        case FloatType      => "REAL"
+        case IntegerType    => "INTEGER"
+        case LongType       => "BIGINT"
+        case ShortType      => "SMALLINT"
+        case StringType     =>
+          if (field.metadata.contains("maxlength")) {
+            s"VARCHAR(${field.metadata.getLong("maxlength")})"
+          } else {
+            "TEXT"
+          }
+        case TimestampType  => "TIMESTAMP"
+        case _ => throw new IllegalArgumentException(s"Don't know how to save $field to JDBC")
+      }
+
+      val nullable = if (field.nullable) "" else "NOT NULL"
+      s""""$fname" $ftype $nullable"""
+
+    }}.mkString(", ")
+    sqlSchema
+
   }
 
   /**
@@ -42,7 +76,20 @@ object HanaUtil extends JdbcUtil {
    * ensures that table schema and provided schema are
    * identical
    */
-  def createInsertSql(schema:StructType, options:HanaOptions): String = ???
+  def createInsertSql(schema:StructType, options:HanaOptions): String = {
+
+    val table = options.getTable
+
+    val columns = schema.fields
+      .map(field => s""""${field.name}"""")
+      .mkString(",")
+
+    val values = schema.fields.map(_ => "?").mkString(",")
+    val insertSql = s"""INSERT INTO $table ($columns) VALUES($values)"""
+
+    insertSql
+
+  }
 
   def createTableIfNotExist(conn: Connection, schema: StructType, options: HanaOptions): Boolean = {
     /*
@@ -164,7 +211,41 @@ object HanaUtil extends JdbcUtil {
     }
   }
 
-  def insertValue(conn:Connection, stmt:PreparedStatement, row:Row, pos:Int, dataType:DataType):Unit = ???
+  def insertValue(conn:Connection, stmt:PreparedStatement, row:Row, pos:Int, dataType:DataType):Unit = {
+
+    dataType match {
+      case BinaryType =>
+        stmt.setBytes(pos + 1, row.getAs[Array[Byte]](pos))
+      case BooleanType =>
+        stmt.setBoolean(pos + 1, row.getBoolean(pos))
+      case ByteType =>
+        stmt.setByte(pos + 1, row.getByte(pos))
+      case DateType =>
+        stmt.setDate(pos + 1, row.getAs[java.sql.Date](pos))
+      case _: DecimalType =>
+        stmt.setBigDecimal(pos + 1, row.getDecimal(pos))
+      case DoubleType =>
+        stmt.setDouble(pos + 1, row.getDouble(pos))
+      case FloatType =>
+        stmt.setFloat(pos + 1, row.getFloat(pos))
+      case IntegerType =>
+        stmt.setInt(pos + 1, row.getInt(pos))
+      case LongType =>
+        stmt.setLong(pos + 1, row.getLong(pos))
+      case ShortType =>
+        stmt.setInt(pos + 1, row.getInt(pos))
+      case StringType =>
+        stmt.setString(pos + 1, row.getString(pos))
+      case TimestampType =>
+        stmt.setTimestamp(pos + 1, row.getAs[java.sql.Timestamp](pos))
+      /*
+       * SAP HANA does not support complex data types like ARRAY
+       */
+      case _ =>
+        throw new Exception(s"Data type `${dataType.simpleString}` is not supported.")
+    }
+
+  }
 
   def tableExists(conn:Connection, options:HanaOptions):Boolean = {
 
