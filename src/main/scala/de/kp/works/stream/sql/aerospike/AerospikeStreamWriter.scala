@@ -26,7 +26,7 @@ import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.sources.v2.writer.streaming.StreamWriter
 import org.apache.spark.sql.sources.v2.writer.{DataWriter, DataWriterFactory, WriterCommitMessage}
 import org.apache.spark.sql.streaming.OutputMode
-import org.apache.spark.sql.types.{DataType, StructType}
+import org.apache.spark.sql.types._
 
 import java.security.MessageDigest
 import scala.collection.mutable
@@ -194,9 +194,9 @@ case class AerospikeStreamDataWriter(
 
             val fname = field.name
             val ftype = field.dataType
+            val fpos  = schema.fieldIndex(fname)
 
-            val fval = row.get(schema.fieldIndex(fname))
-            field2Bin(fname, ftype, fval)
+            field2Bin(fname, ftype, row, fpos)
 
           })
 
@@ -217,7 +217,49 @@ case class AerospikeStreamDataWriter(
 
   }
 
-  private def field2Bin(fname:String, ftype:DataType, fval:Any):Bin = ???
+  private def field2Bin(fname:String, ftype:DataType, row:Row, pos:Int):Bin = {
+
+    if (row.get(pos) == null) return Bin.asNull(fname)
+    val bin = ftype match {
+      case BinaryType =>
+        new Bin(fname, row.getAs[Array[Byte]](pos))
+      case BooleanType =>
+        new Bin(fname, row.getBoolean(pos))
+      case ByteType =>
+        new Bin(fname, row.getByte(pos))
+      case DateType =>
+        /* Date is serialized */
+        val v = row.getAs[java.sql.Date](pos).toString
+        new Bin(fname, v)
+      case DoubleType =>
+        new Bin(fname, row.getDouble(pos))
+      case FloatType =>
+        new Bin(fname, row.getFloat(pos))
+      case IntegerType =>
+        new Bin(fname, row.getInt(pos))
+      case LongType =>
+        new Bin(fname, row.getLong(pos))
+      case ShortType =>
+        val v = row.getShort(pos).toInt
+        new Bin(fname, v)
+      case StringType =>
+        new Bin(fname, row.getString(pos))
+      case TimestampType =>
+        val v = row.getAs[java.sql.Timestamp](pos).getTime
+        new Bin(fname, v)
+      case ArrayType(ct, _) =>
+        val v = row.getAs[Seq[_]](pos).toList
+        new Bin(fname, v)
+      case MapType(_, _, _) =>
+        val v = row.getAs[Map[_, _]](pos)
+        new Bin(fname, v)
+      case _ =>
+        throw new Exception(s"Data type `${ftype.simpleString}` is not supported.")
+    }
+
+    bin
+
+  }
 
   private def doWriteAndClose(): Unit = {
 
