@@ -38,6 +38,9 @@ class AerospikeOptions(options: DataSourceOptions) extends Logging {
   def getBatchSize:Int =
     settings.getOrElse(AEROSPIKE_STREAM_SETTINGS.BATCH_SIZE, "1000").toInt
 
+  def getExpiration:Int =
+    settings.getOrElse(AEROSPIKE_STREAM_SETTINGS.AEROSPIKE_EXPIRATION, "0").toInt
+
   def getHost:String =
     settings.getOrElse(AEROSPIKE_STREAM_SETTINGS.AEROSPIKE_HOST,
       throw new Exception("No Aerospike database host specified."))
@@ -45,9 +48,17 @@ class AerospikeOptions(options: DataSourceOptions) extends Logging {
   def getMaxRetries:Int =
     settings.getOrElse(AEROSPIKE_STREAM_SETTINGS.AEROSPIKE_MAX_RETRIES, "3").toInt
 
+  def getNamespace:String =
+    settings.getOrElse(AEROSPIKE_STREAM_SETTINGS.AEROSPIKE_NAMESPACE,
+      throw new Exception("No Aerospike namespace specified."))
+
   def getPort:Int =
     settings.getOrElse(AEROSPIKE_STREAM_SETTINGS.AEROSPIKE_PORT,
       throw new Exception("No Aerospike database port specified.")).toInt
+
+  def getSetname:String =
+    settings.getOrElse(AEROSPIKE_STREAM_SETTINGS.AEROSPIKE_SET,
+      throw new Exception("No Aerospike set name specified."))
 
   /**
    * The timeout of an Aerospike database connection

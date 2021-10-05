@@ -175,7 +175,7 @@ case class IgniteStreamDataWriter(
         tx.commit()
 
         buffer.clear
-        retryNum = maxRetries
+        retryNum = maxRetries + 1
 
       } catch {
         case _:Throwable =>

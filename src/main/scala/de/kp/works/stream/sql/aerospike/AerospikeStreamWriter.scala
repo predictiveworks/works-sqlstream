@@ -19,16 +19,17 @@ package de.kp.works.stream.sql.aerospike
  */
 
 import com.aerospike.client.policy.{ClientPolicy, RecordExistsAction, TlsPolicy, WritePolicy}
-import com.aerospike.client.{AerospikeClient, Host}
+import com.aerospike.client.{AerospikeClient, Bin, Host, Key}
 import de.kp.works.stream.sql.Logging
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.sources.v2.writer.streaming.StreamWriter
 import org.apache.spark.sql.sources.v2.writer.{DataWriter, DataWriterFactory, WriterCommitMessage}
 import org.apache.spark.sql.streaming.OutputMode
-import org.apache.spark.sql.types.StructType
+import org.apache.spark.sql.types.{DataType, StructType}
 
-import scala.collection.mutable.ArrayBuffer
+import java.security.MessageDigest
+import scala.collection.mutable
 
 /**
  * Dummy commit message. The DataSourceV2 framework requires
@@ -108,12 +109,15 @@ case class AerospikeStreamDataWriter(
   /* Use a local cache for batch write to Aerospike */
 
   private val bufferSize = options.getBatchSize
-  private val buffer = new ArrayBuffer[Row](bufferSize)
+  private val buffer = new mutable.Queue[Row]
 
   private val maxRetries = options.getMaxRetries
 
   private var client:AerospikeClient = _
   private var writePolicy:WritePolicy = _
+
+  private val namespace = options.getNamespace
+  private val setname   = options.getSetname
 
   buildAerospikeClient()
 
@@ -133,7 +137,7 @@ case class AerospikeStreamDataWriter(
    */
   override def write(record: InternalRow): Unit = {
 
-    buffer.append(Row.fromSeq(record.copy().toSeq(schema)))
+    buffer.enqueue(Row.fromSeq(record.copy().toSeq(schema)))
     if (buffer.size == bufferSize) {
 
       log.debug(s"Local buffer is full with size $bufferSize, do write and reset local buffer.")
@@ -145,9 +149,90 @@ case class AerospikeStreamDataWriter(
 
   /** AEROSPIKE HELPER METHOD * */
 
-  private def doWriteAndResetBuffer(): Unit = ???
+  private def doWriteAndResetBuffer(): Unit = {
 
-  private def doWriteAndClose(): Unit = ???
+    var retryNum = 0
+    while (retryNum < maxRetries) {
+      /*
+       * In Aerospike, all single record operations have transactional guarantees.
+       * Every single record request, including those containing multiple operations
+       *  on one or more 'bins'”' (columns), executes atomically under a record lock
+       * with isolation and durability, and ensures that all replicas are consistent.
+       *
+       * However, Aerospike transactions do not span multiple record boundaries.
+       */
+      try {
+
+        while (buffer.nonEmpty) {
+
+          val row = buffer.dequeue()
+
+          /*
+           * KEY     KEY     KEY     KEY     KEY
+           *
+           * The key is built from the namespace, the set name
+           * and the MD5 value from the serialized field values;
+           *
+           * this avoids to provide plenty of configurations
+           * to specify the content of an Aerospike record
+           */
+          val serialized = row.toSeq.map(v => v.toString).mkString("#")
+          val uid = try {
+            new String(
+              MessageDigest.getInstance("MD5").digest(serialized.getBytes()))
+
+          } catch {
+            case _:Throwable => serialized
+
+          }
+
+          val key = new Key(namespace, setname, uid)
+          /*
+           * VALUES     VALUES     VALUES     VALUES
+           */
+          val values:Array[Bin] = schema.fields.map(field => {
+
+            val fname = field.name
+            val ftype = field.dataType
+
+            val fval = row.get(schema.fieldIndex(fname))
+            field2Bin(fname, ftype, fval)
+
+          })
+
+          /* Finally write key and values to Aerospike */
+          client.put(writePolicy, key, values: _*)
+
+        }
+
+        buffer.clear
+        retryNum = maxRetries + 1
+
+      } catch {
+        case _:Throwable =>
+          retryNum += 1
+      }
+
+    }
+
+  }
+
+  private def field2Bin(fname:String, ftype:DataType, fval:Any):Bin = ???
+
+  private def doWriteAndClose(): Unit = {
+
+    if (buffer.nonEmpty) {
+      doWriteAndResetBuffer()
+    }
+
+    try {
+      client.close()
+
+    } catch {
+      case e: Throwable => log.error("Close connection with exception", e)
+    }
+
+  }
 
   private def buildAerospikeClient():Unit = {
 
@@ -189,6 +274,8 @@ case class AerospikeStreamDataWriter(
     /* Define write policy */
 
     writePolicy = new WritePolicy(client.writePolicyDefault)
+    writePolicy.expiration = options.getExpiration
+
     val writeMode = options.getWriteMode
     writeMode match {
       case "ErrorIfExists" =>

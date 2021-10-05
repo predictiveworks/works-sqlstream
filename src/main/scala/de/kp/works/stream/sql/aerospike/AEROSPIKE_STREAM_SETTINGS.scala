@@ -35,6 +35,20 @@ object AEROSPIKE_STREAM_SETTINGS {
    */
   val AEROSPIKE_AUTH_MODE   = "aerospike.auth.mode"
   /**
+	 * Record expiration. Also known as ttl (time to live).
+	 * Seconds record will live before being removed by the server.
+	 *
+	 * Expiration values:
+	 *
+	 *  -2: Do not change ttl when record is updated.
+	 *  -1: Never expire.
+	 *   0: Default to namespace configuration variable "default-ttl" on the server.
+	 * > 0: Actual ttl in seconds.
+   *
+	 * Default: 0
+	 */
+  val AEROSPIKE_EXPIRATION  = "aerospike.expiration"
+  /**
    * The host of the Aerospike database
    */
   val AEROSPIKE_HOST        = "aerospike.host"
@@ -44,6 +58,11 @@ object AEROSPIKE_STREAM_SETTINGS {
    */
   val AEROSPIKE_MAX_RETRIES = "aerospike.max.retries"
   /**
+   * The name of the Aerospike namespace used
+   * to organize data
+   */
+  val AEROSPIKE_NAMESPACE   = "aerospike.namespace"
+  /**
    * Password of the registered user.
    * Required for authentication
    */
@@ -52,6 +71,11 @@ object AEROSPIKE_STREAM_SETTINGS {
    * The port of the Aerospike database
    */
   val AEROSPIKE_PORT        = "aerospike.port"
+  /**
+   * The name of the Aerospike set used to
+   * organize data
+   */
+  val AEROSPIKE_SET         = "aerospike.set"
   val AEROSPIKE_TIMEOUT     = "aerospike.timeout"
   val AEROSPIKE_TLS_MODE    = "aerospike.tls.mode"
   val AEROSPIKE_TLS_NAME    = "aerospike.tls.name"
