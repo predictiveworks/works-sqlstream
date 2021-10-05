@@ -75,7 +75,29 @@ class HanaOptions(options: DataSourceOptions) extends Logging {
   def getMaxRetries:Int =
     settings.getOrElse(HANA_STREAM_SETTINGS.HANA_MAX_RETRIES, "3").toInt
 
-  def getTable:String = ???
+  def getPartition:Option[String] =
+    settings.get(HANA_STREAM_SETTINGS.HANA_PARTITION)
+
+  def getPrimaryKey:Option[String] =
+    settings.get(HANA_STREAM_SETTINGS.HANA_PRIMARY_KEY)
+
+  /**
+   * This method builds the SAP HANA table name from
+   * the provided configuration. It thereby distinguishes
+   * between uses case with and without namespace
+   */
+  def getTable:String = {
+
+    val table = settings.getOrElse(HANA_STREAM_SETTINGS.HANA_TABLE,
+      throw new Exception(s"No SAP HANA table specified."))
+
+    val namespace = settings.get(HANA_STREAM_SETTINGS.HANA_NAMESPACE)
+    namespace match {
+      case Some(value) => s""""$value"."$table""""
+      case None => table
+    }
+
+  }
 
   /* User authentication */
 

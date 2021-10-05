@@ -24,13 +24,17 @@ import org.apache.spark.sql.types.{DataType, StructType}
 
 import java.sql.{Connection, PreparedStatement, Statement}
 import java.util.Properties
+import scala.util.Try
 
 object HanaUtil extends JdbcUtil {
   /**
    * Compute the SAP HANA SQL schema string for the
    * given Spark SQL Schema.
    */
-  def buildSqlSchema(schema: StructType, options:HanaOptions): String = ???
+  def buildSqlSchema(schema: StructType, options:HanaOptions): String = {
+
+    ???
+  }
 
   /**
    * The INSERT SQL statement is built from the provided
@@ -41,9 +45,20 @@ object HanaUtil extends JdbcUtil {
   def createInsertSql(schema:StructType, options:HanaOptions): String = ???
 
   def createTableIfNotExist(conn: Connection, schema: StructType, options: HanaOptions): Boolean = {
-
+    /*
+     * Explicitly check whether the configured SAP HANA
+     * database table exists, as SAP HANA does not support
+     * `if not exists` query clause
+     */
+    val exists = tableExists(conn, options)
+    if (exists) return true
+    /*
+     * Build the SAP HANA compliant CREATE TABLE statement
+     */
     val createSql = createTableSql(schema, options)
-
+    /*
+     * Finally create the configured database table
+     */
     var stmt: Statement = null
     var success: Boolean = false
 
@@ -78,30 +93,64 @@ object HanaUtil extends JdbcUtil {
   /**
    * Generate CREATE TABLE statement for SAP HANA
    */
-  def createTableSql(schema: StructType, options: HanaOptions): String = ???
+  def createTableSql(schema: StructType, options: HanaOptions): String = {
+
+    val table = options.getTable
+    val sqlSchema = buildSqlSchema(schema, options)
+
+    val keyName = options.getPrimaryKey
+    val partitionType = options.getPartition
+
+    /* Primary key support */
+
+    var primaryKey = ""
+    if (keyName.isDefined && keyName.get.nonEmpty)
+      primaryKey = ", PRIMARY KEY (\"" + keyName + "\")"
+
+    /* Partition support */
+
+    var partition = ""
+    if (partitionType.isDefined) {
+      /*
+       * Evaluate provided partition type: The number of partitions is determined
+       * by the database at runtime according to its configuration.
+       *
+       * It is recommended by SAP to use this function in scripts.
+       */
+      if (partitionType.get == HANA_STREAM_SETTINGS.HASH_PARTITION) {
+        if (keyName.isDefined && keyName.get.nonEmpty) {
+          partition = " PARTITION BY HASH(\"" + keyName + "\") PARTITIONS GET_NUM_SERVERS()"
+        }
+        else
+          throw new Exception("Hash partition is not supported when no primary key is specified.")
+      }
+      else if (partitionType.get == HANA_STREAM_SETTINGS.ROUND_ROBIN_PARTITION) {
+        partition = " PARTITION BY ROUNDROBIN PARTITIONS GET_NUM_SERVERS()"
+      }
+    }
+
+    s"""CREATE ROW TABLE $table ($sqlSchema$primaryKey)$partition"""
+
+  }
 
   def getConnection(options:HanaOptions): Connection = {
 
     val driver = getDriver(options.getJdbcDriver)
-    var url = s"jdbc:sap://${options.getDatabaseUrl}"
+    val url = s"jdbc:sap://${options.getDatabaseUrl}"
+
+    val jdbcProperties = new Properties()
 
     /* User authentication */
 
     val (user, pass) = options.getUserAndPass
-
-    val authProps = new Properties()
     if (user.isDefined && pass.isDefined) {
-      /*
-       * User authentication parameters are set
-       * as URL parameters. For more details:
-       *
-       * https://help.sap.com/viewer/0eec0d68141541d1b07893a39944924e/2.0.03/en-US/ff15928cf5594d78b841fbbe649f04b4.html
-       */
-      url = url + "&user=" + user.get + "&password=" + pass.get
+
+      jdbcProperties.put("user", user.get)
+      jdbcProperties.put("password", pass.get)
 
     }
 
-    driver.connect(url, authProps)
+    driver.connect(url, jdbcProperties)
 
   }
 
@@ -116,5 +165,24 @@ object HanaUtil extends JdbcUtil {
   }
 
   def insertValue(conn:Connection, stmt:PreparedStatement, row:Row, pos:Int, dataType:DataType):Unit = ???
+
+  def tableExists(conn:Connection, options:HanaOptions):Boolean = {
+
+    val table = options.getTable
+    val sql = s"""SELECT * FROM $table WHERE 1 = 0"""
+
+    Try {
+
+      val statement = conn.prepareStatement(sql)
+      try {
+        statement.setQueryTimeout(0)
+        statement.executeQuery()
+
+      } finally {
+        statement.close()
+      }
+
+    }.isSuccess
+  }
 
 }

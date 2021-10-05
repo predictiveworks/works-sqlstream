@@ -139,7 +139,7 @@ object SnowflakeUtil extends JdbcUtil {
      * from the provided schema
      */
     val sqlSchema = buildSqlSchema(schema, options)
-    s"CREATE TABLE IF NOT EXISTS $table ($sqlSchema)"
+    s"""CREATE TABLE IF NOT EXISTS $table ($sqlSchema)"""
 
   }
   /**
@@ -158,7 +158,7 @@ object SnowflakeUtil extends JdbcUtil {
       .mkString(",")
 
     val values = schema.fields.map(_ => "?").mkString(",")
-    val insertSql = s"INSERT INTO $table ($columns) VALUES($values)"
+    val insertSql = s"""INSERT INTO $table ($columns) VALUES($values)"""
 
     insertSql
 

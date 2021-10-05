@@ -94,7 +94,7 @@ trait JdbcUtil {
        * but returns valid ResultSetMetadata that can be used to optimize
        * write requests to the Redshift database
        */
-      val rs: ResultSet = stmt.executeQuery(s"SELECT * FROM ${table} WHERE 1 = 0")
+      val rs: ResultSet = stmt.executeQuery(s"""SELECT * FROM ${table} WHERE 1 = 0""")
       val rsMetadata = rs.getMetaData
 
       val columnCount = rsMetadata.getColumnCount

@@ -131,7 +131,7 @@ object RedshiftUtil extends JdbcUtil {
       .mkString(",")
 
     val values = schema.fields.map(_ => "?").mkString(",")
-    val insertSql = s"INSERT INTO $table ($columns) VALUES($values)"
+    val insertSql = s"""INSERT INTO $table ($columns) VALUES($values)"""
 
     insertSql
 
@@ -158,7 +158,7 @@ object RedshiftUtil extends JdbcUtil {
     val sortKey = options.getSortKey.getOrElse("")
     val table = options.getTable
 
-    s"CREATE TABLE IF NOT EXISTS $table ($sqlSchema) $distStyle $distKey $sortKey"
+    s"""CREATE TABLE IF NOT EXISTS $table ($sqlSchema) $distStyle $distKey $sortKey"""
 
   }
 

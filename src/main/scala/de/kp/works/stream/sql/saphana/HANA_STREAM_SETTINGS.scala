@@ -21,6 +21,9 @@ package de.kp.works.stream.sql.saphana
 
 object HANA_STREAM_SETTINGS {
 
+  val HASH_PARTITION = "hash"
+  val ROUND_ROBIN_PARTITION = "round_robin"
+
   val FORMAT = "de.kp.works.stream.sql.saphana.HanaSinkProvider"
   /**
    * The driver name of the Jdbc driver used to
@@ -40,8 +43,12 @@ object HANA_STREAM_SETTINGS {
    * to SAP HANA instance
    */
   val HANA_MAX_RETRIES = "hana.max.retries"
+  val HANA_NAMESPACE   = "hana.namespace"
+  val HANA_PARTITION   = "hana.partition"
   val HANA_PASSWORD    = "hana.password"
   val HANA_PORT        = "hana.port"
+  val HANA_PRIMARY_KEY = "hana.primary.key"
+  val HANA_TABLE       = "hana.table"
   val HANA_TIMEOUT     = "hana.timeout"
   val HANA_USER        = "hana.username"
 
