@@ -1,0 +1,2 @@
+
+# Exasol as Streaming Sink

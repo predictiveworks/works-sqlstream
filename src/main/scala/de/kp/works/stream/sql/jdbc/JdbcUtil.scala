@@ -143,9 +143,6 @@ trait JdbcUtil {
 
   /**
    * This method maps a JDBC type to a Spark SQL [DataType].
-   *
-   * Note, this method is not restricted to Redshift JDBC
-   * data types, which specify a subset
    */
   def getDataType(sqlType: Int, precision: Int, scale: Int, signed: Boolean): DataType = {
 
@@ -166,7 +163,7 @@ trait JdbcUtil {
       case java.sql.Types.DATE => DateType
       case java.sql.Types.DECIMAL
         if precision != 0 || scale != 0 => DecimalType(precision, scale)
-      case java.sql.Types.DECIMAL => DecimalType(10, 0)
+      case java.sql.Types.DECIMAL => DecimalType(20, 0)
       case java.sql.Types.DISTINCT => null
       case java.sql.Types.DOUBLE => DoubleType
       case java.sql.Types.FLOAT => FloatType
@@ -184,18 +181,18 @@ trait JdbcUtil {
       case java.sql.Types.NULL => null
       case java.sql.Types.NUMERIC
         if precision != 0 || scale != 0 => DecimalType(precision, scale)
-      case java.sql.Types.NUMERIC => DecimalType(10, 0)
+      case java.sql.Types.NUMERIC => DecimalType(20, 0)
       case java.sql.Types.NVARCHAR => StringType
       case java.sql.Types.OTHER => null
-      case java.sql.Types.REAL => DoubleType
+      case java.sql.Types.REAL => FloatType
       case java.sql.Types.REF => StringType
       case java.sql.Types.ROWID => LongType
-      case java.sql.Types.SMALLINT => IntegerType
+      case java.sql.Types.SMALLINT => ShortType
       case java.sql.Types.SQLXML => StringType
       case java.sql.Types.STRUCT => StringType
       case java.sql.Types.TIME => TimestampType
       case java.sql.Types.TIMESTAMP => TimestampType
-      case java.sql.Types.TINYINT => IntegerType
+      case java.sql.Types.TINYINT => ShortType
       case java.sql.Types.VARBINARY => BinaryType
       case java.sql.Types.VARCHAR => StringType
       case _ => null

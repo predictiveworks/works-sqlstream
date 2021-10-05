@@ -1,0 +1,2 @@
+
+# Aerospike as Streaming Sink

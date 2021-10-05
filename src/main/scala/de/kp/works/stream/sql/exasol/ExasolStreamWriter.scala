@@ -1,4 +1,4 @@
-package de.kp.works.stream.sql.redshift
+package de.kp.works.stream.sql.exasol
 /*
  * Copyright (c) 2020 - 2021 Dr. Krusche & Partner PartG. All rights reserved.
  *
@@ -21,22 +21,23 @@ package de.kp.works.stream.sql.redshift
 import de.kp.works.stream.sql.Logging
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.catalyst.InternalRow
-import org.apache.spark.sql.sources.v2.writer.streaming.StreamWriter
 import org.apache.spark.sql.sources.v2.writer.{DataWriter, DataWriterFactory, WriterCommitMessage}
+import org.apache.spark.sql.sources.v2.writer.streaming.StreamWriter
 import org.apache.spark.sql.streaming.OutputMode
-import org.apache.spark.sql.types._
+import org.apache.spark.sql.types.{StructField, StructType}
 
 import java.sql.{Connection, PreparedStatement, SQLException}
 import scala.collection.mutable.ArrayBuffer
+
 /**
  * Dummy commit message. The DataSourceV2 framework requires
  * a commit message implementation but we don't need to really
  * send one.
  */
-case object RedshiftWriterCommitMessage extends WriterCommitMessage
+case object ExasolWriterCommitMessage extends WriterCommitMessage
 
-class RedshiftStreamWriter(
-  options:RedshiftOptions,
+class ExasolStreamWriter(
+  options:ExasolOptions,
   outputMode:OutputMode,
   schema:StructType) extends StreamWriter with Logging {
   /**
@@ -53,7 +54,7 @@ class RedshiftStreamWriter(
    * clean up the data left by data writers.
    */
   override def abort(epochId: Long, writerCommitMessages: Array[WriterCommitMessage]): Unit = {
-    log.info(s"epoch $epochId of RedshiftStreamWriter aborted.")
+    log.info(s"epoch $epochId of ExasolStreamWriter aborted.")
   }
   /**
    * Commits this writing job for the specified epoch with a list of commit messages. The commit
@@ -67,19 +68,19 @@ class RedshiftStreamWriter(
    * the same epoch are idempotent.
    */
   override def commit(epochId: Long, writerCommitMessages: Array[WriterCommitMessage]): Unit = {
-    log.info(s"epoch $epochId of RedshiftStreamWriter committed.")
+    log.info(s"epoch $epochId of ExasolStreamWriter committed.")
   }
   override def createWriterFactory(): DataWriterFactory[InternalRow] =
-    RedshiftStreamWriterFactory(options, outputMode, schema)
+    ExasolStreamWriterFactory(options, outputMode, schema)
 
 }
 /**
- * A [DataWriterFactory] for Redshift writing. This factory
+ * A [DataWriterFactory] for Exasol writing. This factory
  * will be serialized and sent to executors to generate the
  * per-task data writers.
  */
-case class RedshiftStreamWriterFactory(
-  options:RedshiftOptions,
+case class ExasolStreamWriterFactory(
+  options:ExasolOptions,
   outputMode:OutputMode,
   schema: StructType) extends DataWriterFactory[InternalRow] with Logging {
 
@@ -89,26 +90,25 @@ case class RedshiftStreamWriterFactory(
     epochId: Long): DataWriter[InternalRow] = {
 
     log.info(s"Create date writer for epochId=$epochId, taskId=$taskId, and partitionId=$partitionId.")
-    RedshiftStreamDataWriter(options, outputMode, schema)
+    ExasolStreamDataWriter(options, outputMode, schema)
 
   }
 
 }
-
 /**
- * A [DataWriter] for Redshift writing. A data writer will be created
+ * A [DataWriter] for Exasol writing. A data writer will be created
  * in each partition to process incoming rows.
  *
- * The current implementation of the Redshift writer supports INSERT
+ * The current implementation of the Exasol writer supports INSERT
  * only, i.e. the user to make sure that there are no conflicts with
  * respect to duplicated primary keys
  */
-case class RedshiftStreamDataWriter(
-  options:RedshiftOptions,
+case class ExasolStreamDataWriter(
+  options:ExasolOptions,
   outputMode:OutputMode,
   schema: StructType) extends DataWriter[InternalRow] with Logging {
 
-  /* Use a local cache for batch write to Redshift */
+  /* Use a local cache for batch write to Exasol */
 
   private val bufferSize = options.getBatchSize
   private val buffer = new ArrayBuffer[Row](bufferSize)
@@ -124,7 +124,7 @@ case class RedshiftStreamDataWriter(
    * identical
    */
   private val sql:String =
-    RedshiftUtil.createInsertSql(schema, options)
+    ExasolUtil.createInsertSql(schema, options)
 
   private val maxRetries = options.getMaxRetries
   private val timeoutSeconds = options.getConnectionTimeout
@@ -142,7 +142,7 @@ case class RedshiftStreamDataWriter(
   private var fieldSpec:Seq[(Int, StructField)] = _
 
   /*
-   * Check whether the configured Redshift database
+   * Check whether the configured Exasol database
    * table exists and validate whether the provided
    * schema is compliant with the database schema
    */
@@ -153,7 +153,7 @@ case class RedshiftStreamDataWriter(
 
   override def commit(): WriterCommitMessage = {
     doWriteAndClose()
-    RedshiftWriterCommitMessage
+    ExasolWriterCommitMessage
   }
 
   override def write(record: InternalRow): Unit = {
@@ -168,58 +168,17 @@ case class RedshiftStreamDataWriter(
 
   }
 
-  /** REDSHIFT HELPER METHOD **/
+  /** EXASOL HELPER METHOD **/
 
   /**
-   * This method makes sure that the Redshift instance
+   * This method makes sure that the Exasol instance
    * contains the specified table and schema
    */
-  private def validate(): Unit = {
-
-    conn = RedshiftUtil.getConnection(options)
-    /*
-     * Create the specified table if it does
-     * not exist
-     */
-    if (!RedshiftUtil.createTableIfNotExist(conn, schema, options))
-      throw new Exception(
-        s"Trying to connect to Redshift database creating the provided table (if not exists) failed.")
-    /*
-     * Retrieve the database schema; we expect that
-     * the table exists and its column schema is
-     * available
-     */
-    fieldSpec = RedshiftUtil.getColumnTypes(conn, options.getTable)
-    if (fieldSpec.isEmpty)
-      throw new Exception(
-        s"Trying to retrieve metadata from Redshift database table failed.")
-
-    /*
-     * Compare each schema field and table column;
-     * we expect that the order of fields is the same
-     */
-    val schemaFields = schema.fields
-    schemaFields.indices.foreach(i => {
-
-      val schemaField = schemaFields(i)
-      val (_, tableField)  = fieldSpec(i)
-
-      if (schemaField.name != tableField.name)
-        throw new Exception(s"Schema field name and table column name do not match.")
-
-      if (schemaField.dataType != tableField.dataType)
-        throw new Exception(s"Schema field data type and table column type do not match.")
-
-      if (schemaField.nullable != tableField.nullable)
-        throw new Exception(s"Schema field nullable and table column nullable do not match.")
-
-    })
-
-  }
+  private def validate(): Unit = ???
 
   private def insertValue(stmt:PreparedStatement, row:Row, pos:Int):Unit = {
     val (_, field) = fieldSpec(pos)
-    RedshiftUtil.insertValue(conn, stmt, row, pos, field.dataType)
+    ExasolUtil.insertValue(conn, stmt, row, pos, field.dataType)
   }
 
   private def resetConnAndStmt(): Unit = {
@@ -229,7 +188,7 @@ case class RedshiftStreamDataWriter(
      */
     if (conn == null || !conn.isValid(timeoutSeconds)) {
 
-      conn = RedshiftUtil.getConnection(options)
+      conn = ExasolUtil.getConnection(options)
       stmt = conn.prepareStatement(sql)
 
       log.info("Current connection is invalid, create a new one.")
@@ -335,4 +294,6 @@ case class RedshiftStreamDataWriter(
   }
 
 }
+
+
 
