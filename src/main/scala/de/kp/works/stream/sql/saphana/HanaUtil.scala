@@ -19,21 +19,66 @@ package de.kp.works.stream.sql.saphana
  */
 
 import de.kp.works.stream.sql.jdbc.JdbcUtil
+import org.apache.spark.sql.Row
+import org.apache.spark.sql.types.{DataType, StructType}
 
-import java.sql.Connection
+import java.sql.{Connection, PreparedStatement, Statement}
 import java.util.Properties
 
 object HanaUtil extends JdbcUtil {
+  /**
+   * Compute the SAP HANA SQL schema string for the
+   * given Spark SQL Schema.
+   */
+  def buildSqlSchema(schema: StructType, options:HanaOptions): String = ???
 
-  override def getDriverClassName(jdbcDriverName:String): String = {
-    jdbcDriverName match {
-      case "com.sap.db.jdbc.Driver" =>
-        classForName(jdbcDriverName).getName
-      case _ =>
-        classForName(HANA_STREAM_SETTINGS.DEFAULT_JDBC_DRIVER_NAME).getName
+  /**
+   * The INSERT SQL statement is built from the provided
+   * schema specification as the SAP HANA stream writer
+   * ensures that table schema and provided schema are
+   * identical
+   */
+  def createInsertSql(schema:StructType, options:HanaOptions): String = ???
 
+  def createTableIfNotExist(conn: Connection, schema: StructType, options: HanaOptions): Boolean = {
+
+    val createSql = createTableSql(schema, options)
+
+    var stmt: Statement = null
+    var success: Boolean = false
+
+    try {
+
+      conn.setAutoCommit(false)
+
+      stmt = conn.createStatement()
+      stmt.execute(createSql)
+
+      conn.commit()
+      success = true
+
+    } catch {
+      case _: Throwable => /* Do nothing */
+
+    } finally {
+
+      if (stmt != null)
+        try {
+          stmt.close()
+
+        } catch {
+          case _: Throwable => /* Do nothing */
+        }
     }
+
+    success
+
   }
+
+  /**
+   * Generate CREATE TABLE statement for SAP HANA
+   */
+  def createTableSql(schema: StructType, options: HanaOptions): String = ???
 
   def getConnection(options:HanaOptions): Connection = {
 
@@ -59,5 +104,17 @@ object HanaUtil extends JdbcUtil {
     driver.connect(url, authProps)
 
   }
+
+  override def getDriverClassName(jdbcDriverName:String): String = {
+    jdbcDriverName match {
+      case "com.sap.db.jdbc.Driver" =>
+        classForName(jdbcDriverName).getName
+      case _ =>
+        classForName(HANA_STREAM_SETTINGS.DEFAULT_JDBC_DRIVER_NAME).getName
+
+    }
+  }
+
+  def insertValue(conn:Connection, stmt:PreparedStatement, row:Row, pos:Int, dataType:DataType):Unit = ???
 
 }

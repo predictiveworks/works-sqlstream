@@ -112,8 +112,14 @@ case class HanaStreamDataWriter(
 
   private var conn: Connection = _
   private var stmt: PreparedStatement = _
-
-  private var sql:String = _
+  /*
+   * The INSERT SQL statement is built from the provided
+   * schema specification as the SAP HANA stream writer
+   * ensures that table schema and provided schema are
+   * identical
+   */
+  private val sql: String =
+    HanaUtil.createInsertSql(schema, options)
 
   private val maxRetries = options.getMaxRetries
   private val timeoutSeconds = options.getConnectionTimeout
@@ -123,14 +129,19 @@ case class HanaStreamDataWriter(
    */
   private val numFields = schema.fields.length
   /*
-   * Compute SAP HANA JDBC compliant NULL types
-   * to insert into the prepared statement in
-   * case of a NULL value
+   * The field specification combines a JDBC SQL type
+   * and its SQL data type counterpart. It is retrieved
+   * while validating the provided table and schema and
+   * is used to fill prepared statements
    */
-  private val nullTypes = schema.fields
-    .map(field => getNullType(field.dataType))
+  private var fieldSpec:Seq[(Int, StructField)] = _
 
-  validateSchema()
+  /*
+   * Check whether the configured SAP HANA database
+   * table exists and validate whether the provided
+   * schema is compliant with the database schema
+   */
+  validate()
 
   override def abort(): Unit =
     log.info(s"Abort writing with ${buffer.size} records in local buffer.")
@@ -154,15 +165,54 @@ case class HanaStreamDataWriter(
 
   /** HANA HELPER METHOD **/
 
+  private def validate(): Unit = {
 
-  private def getNullType(dataType:DataType):Int = ???
+    conn = HanaUtil.getConnection(options)
+    /*
+     * Create the specified table if it does
+     * not exist
+     */
+    if (!HanaUtil.createTableIfNotExist(conn, schema, options))
+      throw new Exception(
+        s"Trying to connect to SAP HANA database creating the provided table (if not exists) failed.")
+    /*
+     * Retrieve the database schema; we expect that
+     * the table exists and its column schema is
+     * available
+     */
+    fieldSpec = HanaUtil.getColumnTypes(conn, options.getTable)
+    if (fieldSpec.isEmpty)
+      throw new Exception(
+        s"Trying to retrieve metadata from SAP HANA database table failed.")
 
-  private def validateSchema(): Unit = ???
+    /*
+     * Compare each schema field and table column;
+     * we expect that the order of fields is the same
+     */
+    val schemaFields = schema.fields
+    schemaFields.indices.foreach(i => {
 
-  private def insertValue(
-    stmt:PreparedStatement,
-    row:Row,
-    pos:Int):Unit = ???
+      val schemaField = schemaFields(i)
+      val (_, tableField)  = fieldSpec(i)
+
+      if (schemaField.name != tableField.name)
+        throw new Exception(s"Schema field name and table column name do not match.")
+
+      if (schemaField.dataType != tableField.dataType)
+        throw new Exception(s"Schema field data type and table column type do not match.")
+
+      if (schemaField.nullable != tableField.nullable)
+        throw new Exception(s"Schema field nullable and table column nullable do not match.")
+
+    })
+
+
+  }
+
+  private def insertValue(stmt:PreparedStatement, row:Row, pos:Int):Unit = {
+    val (_, field) = fieldSpec(pos)
+    HanaUtil.insertValue(conn, stmt, row, pos, field.dataType)
+  }
 
   private def resetConnAndStmt(): Unit = {
     /*
@@ -206,9 +256,10 @@ case class HanaStreamDataWriter(
             /*
              * Fill prepared SQL statement with row values
              */
-            if (row.isNullAt(i))
-              stmt.setNull(i + 1, nullTypes(i))
-
+            if (row.isNullAt(i)) {
+              val (sqlType, _) = fieldSpec(i)
+              stmt.setNull(i + 1, sqlType)
+            }
             else
               insertValue(stmt, row, i)
 

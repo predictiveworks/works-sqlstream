@@ -75,6 +75,8 @@ class HanaOptions(options: DataSourceOptions) extends Logging {
   def getMaxRetries:Int =
     settings.getOrElse(HANA_STREAM_SETTINGS.HANA_MAX_RETRIES, "3").toInt
 
+  def getTable:String = ???
+
   /* User authentication */
 
   def getUserAndPass:(Option[String], Option[String]) = {
