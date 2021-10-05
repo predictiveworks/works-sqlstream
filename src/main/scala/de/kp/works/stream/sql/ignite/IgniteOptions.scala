@@ -122,7 +122,7 @@ class IgniteOptions(options: DataSourceOptions) extends Logging {
 
   }
 
-  def getIgniteMaxRetries:Int =
+  def getMaxRetries:Int =
     settings.getOrElse(IGNITE_STREAM_SETTINGS.IGNITE_MAX_RETRIES, "3").toInt
 
   private def getMemorySize(text:String):Long = {

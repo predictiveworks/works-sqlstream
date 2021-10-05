@@ -117,7 +117,7 @@ case class IgniteStreamDataWriter(
   private val bufferSize = options.getBatchSize
   private val buffer = new ArrayBuffer[CacheEntry](bufferSize)
 
-  private val maxRetries = options.getIgniteMaxRetries
+  private val maxRetries = options.getMaxRetries
   /*
    * Retrieve Ignite node instance and check
    * whether the requested cache already exists.

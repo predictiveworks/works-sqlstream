@@ -19,6 +19,7 @@
         <maven.compiler.source>1.8</maven.compiler.source>
         <maven.compiler.target>1.8</maven.compiler.target>
 
+        <aerospike.version>5.1.8</aerospike.version>
         <akka.http.version>10.1.14</akka.http.version>
         <akka.stream.version>2.5.31</akka.stream.version>
         <bouncycastle.version>1.68</bouncycastle.version>
@@ -60,6 +61,14 @@
             <groupId>com.typesafe.akka</groupId>
             <artifactId>akka-stream_${scala.binary.version}</artifactId>
             <version>${akka.stream.version}</version>
+        </dependency>
+
+        <!-- AEROSPIKE
+        -->
+         <dependency>
+            <groupId>com.aerospike</groupId>
+            <artifactId>aerospike-client</artifactId>
+            <version>${aerospike.version}</version>
         </dependency>
 
         <!-- BOUNCY CASTLE
