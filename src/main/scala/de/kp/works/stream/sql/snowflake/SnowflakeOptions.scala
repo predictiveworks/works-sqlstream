@@ -35,7 +35,7 @@ class SnowflakeOptions(options: DataSourceOptions) extends Logging {
   /**
    * The version of the [SnowflakeStreamWriter]
    */
-  private val VERSION = "0.4.0"
+  private val VERSION = "0.4.3"
 
   private val settings:Map[String,String] = options.asMap.asScala.toMap
   /**

@@ -172,13 +172,18 @@ class SseSource(options: SseOptions)
 
       override def eventArrived(event:SseEvent): Unit =  synchronized {
 
-        val offset = currentOffset.offset + 1L
-        val row = SseUtil.toRow(event, schemaType)
+        val rows = SseUtil.toRows(event, schemaType)
+        rows.foreach(row => {
 
-        events.put(offset, row)
-        store.store[Row](offset, row)
+          val offset = currentOffset.offset + 1L
 
-        currentOffset = LongOffset(offset)
+          events.put(offset, row)
+          store.store[Row](offset, row)
+
+          currentOffset = LongOffset(offset)
+
+        })
+
         log.trace(s"Event arrived, ${event.sseType} ${event.sseData}")
 
       }

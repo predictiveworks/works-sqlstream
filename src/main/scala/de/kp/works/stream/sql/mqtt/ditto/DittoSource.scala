@@ -19,11 +19,11 @@ package de.kp.works.stream.sql.mqtt.ditto
  */
 
 import de.kp.works.stream.sql.{Logging, LongOffset}
-import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.catalyst.InternalRow
-import org.apache.spark.sql.sources.v2.reader.{InputPartition, InputPartitionReader}
 import org.apache.spark.sql.sources.v2.reader.streaming.{MicroBatchReader, Offset}
+import org.apache.spark.sql.sources.v2.reader.{InputPartition, InputPartitionReader}
 import org.apache.spark.sql.types.StructType
+import org.apache.spark.sql.{Row, SparkSession}
 
 import java.util
 import java.util.Optional
@@ -38,7 +38,7 @@ class DittoSource(options: DittoOptions)
   private var startOffset: Offset = _
   private var endOffset: Offset   = _
 
-  private val messages = new TrieMap[Long, DittoMessage]
+  private val messages = new TrieMap[Long, Row]
 
   private val persistence = options.getPersistence
   private val store = new DittoEventStore(persistence)
@@ -94,13 +94,13 @@ class DittoSource(options: DittoOptions)
 
   override def planInputPartitions(): util.List[InputPartition[InternalRow]] = {
 
-    val rawMessages: IndexedSeq[DittoMessage] = synchronized {
+    val rawMessages: IndexedSeq[Row] = synchronized {
 
       val sliceStart = LongOffset.convert(startOffset).get.offset + 1
       val sliceEnd   = LongOffset.convert(endOffset).get.offset + 1
 
       for (i <- sliceStart until sliceEnd) yield
-        messages.getOrElse(i, store.retrieve[DittoMessage](i))
+        messages.getOrElse(i, store.retrieve[Row](i))
     }
 
     val spark = SparkSession.getActiveSession.get
@@ -108,7 +108,7 @@ class DittoSource(options: DittoOptions)
     /*
      * `slices` prepares the partitioned output
      */
-    val slices = Array.fill(numPartitions)(new ListBuffer[DittoMessage])
+    val slices = Array.fill(numPartitions)(new ListBuffer[Row])
 
     rawMessages.zipWithIndex
       .foreach {case (rawEvent, index) => slices(index % numPartitions).append(rawEvent)}
@@ -117,7 +117,6 @@ class DittoSource(options: DittoOptions)
      * Note, the order of values must be compliant to the defined
      * schema
      */
-    val schemaType = options.getSchemaType
     (0 until numPartitions).map{i =>
 
       val slice = slices(i)
@@ -133,11 +132,7 @@ class DittoSource(options: DittoOptions)
             }
 
             override def get(): InternalRow = {
-              /*
-               * [DittoUtil] transforms the [DittoMessage] into
-               * a schema compliant sequence of values
-               */
-              val values = DittoUtil.getValues(slice(currentIdx), schemaType)
+              val values = slice(currentIdx).toSeq
               InternalRow(values)
             }
 
@@ -167,17 +162,24 @@ class DittoSource(options: DittoOptions)
   private def buildDittoClient():Unit = {
 
     client = DittoClient.build(options)
+    val schemaType = options.getSchemaType
 
     val expose = new DittoExpose() {
 
       override def messageArrived(message:DittoMessage): Unit =  synchronized {
 
-        val offset = currentOffset.offset + 1L
-        messages.put(offset, message)
+        val rows = DittoUtil.toRows(message, schemaType)
+        rows.foreach(row => {
 
-        store.store(offset, message)
+          val offset = currentOffset.offset + 1L
 
-        currentOffset = LongOffset(offset)
+          messages.put(offset, row)
+          store.store[Row](offset, row)
+
+          currentOffset = LongOffset(offset)
+
+        })
+
         log.trace(s"Message arrived, ${message.`type`} ${message.payload}")
 
       }

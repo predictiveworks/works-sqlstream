@@ -26,7 +26,7 @@ object SseUtil {
    * This method transforms a certain [SseEvent] into
    * a Spark SQL compliant [Row]
    */
-  def toRow(event:SseEvent, schemaType:String):Row = {
+  def toRows(event:SseEvent, schemaType:String):Seq[Row] = {
 
     schemaType.toLowerCase match {
       case "plain" =>
@@ -43,15 +43,15 @@ object SseUtil {
    * - type
    * - data
    */
-  def fromPlainValues(event:SseEvent):Row = {
+  def fromPlainValues(event:SseEvent):Seq[Row] = {
 
     val seq = Seq(
       event.sseId,
       event.sseType,
       event.sseData)
 
-    Row.fromSeq(seq)
-
+    val row = Row.fromSeq(seq)
+    Seq(row)
   }
 
 }

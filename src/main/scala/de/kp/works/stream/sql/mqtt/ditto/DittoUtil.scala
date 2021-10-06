@@ -28,19 +28,19 @@ object DittoUtil {
    * This method transforms a certain [DittoMessage] into
    * a sequence of schema compliant values
    */
-  def getValues(message:DittoMessage, schemaType:String):Seq[Any] = {
+  def toRows(message:DittoMessage, schemaType:String):Seq[Row] = {
 
     schemaType.toLowerCase match {
       case "feature" =>
-        getFeatureValues(message)
+        fromFeatureValues(message)
       case "features" =>
-        getFeaturesValues(message)
+        fromFeaturesValues(message)
       case "message" =>
-        getMessageValues(message)
+        fromMessageValues(message)
       case "plain" =>
-        getPlainValues(message)
+        fromPlainValues(message)
       case "thing" =>
-        getThingValues(message)
+        fromThingValues(message)
       case _ =>
         throw new Exception(s"Schema type `$schemaType` is not supported.")
     }
@@ -60,7 +60,7 @@ object DittoUtil {
    *     }
    *   ]
    */
-  def getFeatureValues(message:DittoMessage):Seq[Any] = {
+  def fromFeatureValues(message:DittoMessage):Seq[Row] = {
 
     val id = "ditto-" + java.util.UUID.randomUUID.toString
 
@@ -75,7 +75,10 @@ object DittoUtil {
       .map(property2Row)
       .toArray
 
-    Seq(id, timestamp, featureId, properties)
+    val seq = Seq(id, timestamp, featureId, properties)
+    val row = Row.fromSeq(seq)
+
+    Seq(row)
 
   }
   /**
@@ -104,7 +107,7 @@ object DittoUtil {
    * - timestamp
    * - features (Array of serialized)
    */
-  def getFeaturesValues(message:DittoMessage):Seq[Any] = {
+  def fromFeaturesValues(message:DittoMessage):Seq[Row] = {
 
     val id = "ditto-" + java.util.UUID.randomUUID.toString
 
@@ -118,8 +121,11 @@ object DittoUtil {
     val features  = json.get("features").getAsJsonArray
       .map(_.toString).toArray
 
-    Seq(id, timestamp, features)
+    // TODO Explode into multiple rows
+    val seq = Seq(id, timestamp, features)
+    val row = Row.fromSeq(seq)
 
+    Seq(row)
   }
 
   /**
@@ -132,7 +138,7 @@ object DittoUtil {
    * - subject
    * - payload
    */
-  def getMessageValues(message:DittoMessage):Seq[Any] = {
+  def fromMessageValues(message:DittoMessage):Seq[Row] = {
 
     val id = "ditto-" + java.util.UUID.randomUUID.toString
 
@@ -146,7 +152,10 @@ object DittoUtil {
     val subject = json.get("subject").getAsString
 
     val payload = json.get("payload").getAsString
-    Seq(id, timestamp, name, namespace, subject, payload)
+    val seq = Seq(id, timestamp, name, namespace, subject, payload)
+
+    val row = Row.fromSeq(seq)
+    Seq(row)
 
   }
   /**
@@ -157,10 +166,13 @@ object DittoUtil {
    * - type
    * - payload
    */
-  def getPlainValues(message:DittoMessage):Seq[Any] = {
+  def fromPlainValues(message:DittoMessage):Seq[Row] = {
 
     val id = "ditto-" + java.util.UUID.randomUUID.toString
-    Seq(id, message.`type`, message.payload)
+    val seq = Seq(id, message.`type`, message.payload)
+
+    val row = Row.fromSeq(seq)
+    Seq(row)
 
   }
   /**
@@ -172,7 +184,7 @@ object DittoUtil {
    * - namespace
    * - features (Array of serialized)
    */
-  def getThingValues(message:DittoMessage):Seq[Any] = {
+  def fromThingValues(message:DittoMessage):Seq[Row] = {
 
     val id = "ditto-" + java.util.UUID.randomUUID.toString
 
@@ -190,7 +202,10 @@ object DittoUtil {
     val features  = json.get("features").getAsJsonArray
       .map(_.toString).toArray
 
-    Seq(id, timestamp, name, namespace, features)
+    val seq = Seq(id, timestamp, name, namespace, features)
+    val row = Row.fromSeq(seq)
+
+    Seq(row)
 
   }
 

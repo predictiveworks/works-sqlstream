@@ -6,7 +6,7 @@
 
     <groupId>de.kp.works</groupId>
     <artifactId>works-sqlstream</artifactId>
-    <version>0.4.0</version>
+    <version>0.4.3</version>
 
     <name>Works SqlStream</name>
     <description>
