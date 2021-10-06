@@ -22,8 +22,8 @@ import de.kp.works.stream.sql.Logging
 import de.kp.works.stream.sql.mqtt.MQTT_STREAM_SETTINGS
 import de.kp.works.stream.ssl.SslOptions
 import org.apache.spark.sql.sources.v2.DataSourceOptions
-import org.eclipse.paho.client.mqttv3.persist.{MemoryPersistence, MqttDefaultFilePersistence}
-import org.eclipse.paho.client.mqttv3.{MqttClient, MqttClientPersistence, MqttConnectOptions}
+import org.eclipse.paho.client.mqttv3.{MqttClient, MqttConnectOptions}
+import org.rocksdb.RocksDB
 
 import javax.net.ssl.SSLSocketFactory
 import scala.collection.JavaConverters._
@@ -140,16 +140,13 @@ class PahoOptions(options: DataSourceOptions) extends Logging {
 
   }
 
-  def getPersistence:MqttClientPersistence = {
+  def getPersistence:RocksDB = {
 
-    settings.get(MQTT_STREAM_SETTINGS.PERSISTENCE) match {
-      case Some("file") =>
-        new MqttDefaultFilePersistence()
-      case Some("memory") =>
-        new MemoryPersistence()
+    val path = settings.getOrElse(MQTT_STREAM_SETTINGS.PERSISTENCE, "")
+    if (path.isEmpty)
+      throw new Exception(s"No persistence path specified.")
 
-      case _ => new MqttDefaultFilePersistence()
-    }
+    PahoPersistence.getOrCreate(path)
 
   }
 

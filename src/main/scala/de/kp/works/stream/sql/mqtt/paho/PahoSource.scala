@@ -20,7 +20,7 @@ package de.kp.works.stream.sql.mqtt.paho
 
 import de.kp.works.stream.sql.{Logging, LongOffset}
 import de.kp.works.stream.sql.mqtt.{MqttEvent, MqttSchema, MqttUtil}
-import org.apache.spark.sql.SparkSession
+import org.apache.spark.sql.{Row, SparkSession}
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.sources.v2.reader.{InputPartition, InputPartitionReader}
 import org.apache.spark.sql.sources.v2.reader.streaming.{MicroBatchReader, Offset}
@@ -40,10 +40,10 @@ class PahoSource(options: PahoOptions)
   private var startOffset: Offset = _
   private var endOffset: Offset   = _
 
-  private val events = new TrieMap[Long, MqttEvent]
+  private val events = new TrieMap[Long, Row]
 
   private val persistence = options.getPersistence
-  private val store = new LocalEventStore(persistence)
+  private val store = new PahoEventStore(persistence)
 
   @GuardedBy("this")
   private var currentOffset: LongOffset = LongOffset(-1L)
@@ -75,7 +75,7 @@ class PahoSource(options: PahoOptions)
     (lastOffsetCommitted.offset until newOffset.get.offset)
       .foreach { x =>
         events.remove(x + 1)
-        store.remove(x + 1)
+        store.remove[Row](x + 1)
       }
 
     lastOffsetCommitted = newOffset.get
@@ -96,13 +96,13 @@ class PahoSource(options: PahoOptions)
 
   override def planInputPartitions(): util.List[InputPartition[InternalRow]] = {
 
-    val rawEvents: IndexedSeq[MqttEvent] = synchronized {
+    val rawEvents: IndexedSeq[Row] = synchronized {
 
       val sliceStart = LongOffset.convert(startOffset).get.offset + 1
       val sliceEnd   = LongOffset.convert(endOffset).get.offset + 1
 
       for (i <- sliceStart until sliceEnd) yield
-        events.getOrElse(i, store.retrieve[MqttEvent](i))
+        events.getOrElse(i, store.retrieve[Row](i))
     }
 
     val spark = SparkSession.getActiveSession.get
@@ -110,7 +110,7 @@ class PahoSource(options: PahoOptions)
     /*
      * `slices` prepares the partitioned output
      */
-    val slices = Array.fill(numPartitions)(new ListBuffer[MqttEvent])
+    val slices = Array.fill(numPartitions)(new ListBuffer[Row])
 
     rawEvents.zipWithIndex
       .foreach {case (rawEvent, index) => slices(index % numPartitions).append(rawEvent)}
@@ -119,7 +119,6 @@ class PahoSource(options: PahoOptions)
      * Note, the order of values must be compliant to the defined
      * schema
      */
-    val schemaType = options.getSchemaType
     (0 until numPartitions).map{i =>
 
       val slice = slices(i)
@@ -134,11 +133,7 @@ class PahoSource(options: PahoOptions)
             }
 
             override def get(): InternalRow = {
-              /*
-               * Schema compliant value representation
-               * of an [MqttEvent].
-               */
-              val values = MqttUtil.getValues(slice(currentIdx), schemaType)
+              val values = slice(currentIdx).toSeq
               InternalRow(values)
             }
 
@@ -178,19 +173,27 @@ class PahoSource(options: PahoOptions)
     val brokerUrl = options.getBrokerUrl
     val clientId  = options.getClientId
 
-    client = new MqttClient(brokerUrl, clientId, persistence)
+    client = new MqttClient(brokerUrl, clientId)
+    val schemaType = options.getSchemaType
+
     val callback = new MqttCallbackExtended() {
 
       override def messageArrived(topic_ : String, message: MqttMessage): Unit = synchronized {
 
         val mqttEvent = new MqttEvent(topic_, message)
 
-        val offset = currentOffset.offset + 1L
-        events.put(offset, mqttEvent)
+        val rows = MqttUtil.toRows(mqttEvent, schemaType)
+        rows.foreach(row => {
 
-        store.store(offset, mqttEvent)
+          val offset = currentOffset.offset + 1L
 
-        currentOffset = LongOffset(offset)
+          events.put(offset, row)
+          store.store[Row](offset, row)
+
+          currentOffset = LongOffset(offset)
+
+        })
+
         log.trace(s"Message arrived, $topic_ $mqttEvent")
 
       }

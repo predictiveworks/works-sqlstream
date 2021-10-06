@@ -19,10 +19,9 @@ package de.kp.works.stream.sql.mqtt.paho
  */
 
 import de.kp.works.stream.sql.Logging
-import org.eclipse.paho.client.mqttv3._
+import org.rocksdb.RocksDB
 
-import java.io._
-import java.util
+import java.io.{ByteArrayInputStream, ByteArrayOutputStream, ObjectInputStream, ObjectOutputStream}
 import scala.util.Try
 
 /** An event store for MQTT sql streaming. */
@@ -39,22 +38,6 @@ trait EventStore {
 
   /** Remove event corresponding to a given id. */
   def remove[T](id: Long): Unit
-
-}
-
-class MqttPersistableData(bytes: Array[Byte]) extends MqttPersistable {
-
-  override def getHeaderLength: Int = bytes.length
-
-  override def getHeaderOffset: Int = 0
-
-  override def getPayloadOffset: Int = 0
-
-  override def getPayloadBytes: Array[Byte] = null
-
-  override def getHeaderBytes: Array[Byte] = bytes
-
-  override def getPayloadLength: Int = 0
 
 }
 
@@ -111,51 +94,38 @@ object JavaSerializer {
 
 }
 
-/**
- * An event store to persist MQTT events received. This is not
- * intended to be thread safe. It uses `MqttDefaultFilePersistence`
- * for storing events on disk locally on the client.
- */
-class LocalEventStore(
-  val persistentStore: MqttClientPersistence,
+class PahoEventStore(
+  val persistentStore: RocksDB,
   val serializer: Serializer) extends EventStore with Logging {
 
-  def this(persistentStore: MqttClientPersistence) =
+  def this(persistentStore: RocksDB) =
     this(persistentStore, JavaSerializer.getInstance())
 
-  private def get(id: Long) = {
-    persistentStore.get(id.toString).getHeaderBytes
-  }
+  private def get(id: Long) = persistentStore.get(id.toString.getBytes)
 
-  import scala.collection.JavaConverters._
-
-  override def maxProcessedOffset: Long = {
-    val keys: util.Enumeration[_] = persistentStore.keys()
-    keys.asScala.map(x => x.toString.toInt).max
-  }
-
-  /** Store a single id and corresponding serialized event */
-  override def store[T](id: Long, message: T): Boolean = {
-
-    val bytes: Array[Byte] = serializer.serialize(message)
-    try {
-
-      persistentStore.put(id.toString, new MqttPersistableData(bytes))
-      true
-
-    } catch {
-      case e: MqttPersistenceException => log.warn(s"Failed to store event Id: $id", e)
-        false
-    }
-  }
+  override def maxProcessedOffset: Long = persistentStore.getLatestSequenceNumber
 
   /** Retrieve event corresponding to a given id. */
   override def retrieve[T](id: Long): T = {
     serializer.deserialize(get(id))
   }
 
-  override def remove[T](id: Long): Unit = {
-    persistentStore.remove(id.toString)
+  override def store[T](id: Long, message: T): Boolean = {
+
+    val bytes: Array[Byte] = serializer.serialize(message)
+    try {
+
+      persistentStore.put(id.toString.getBytes(), bytes)
+      true
+
+    } catch {
+      case e: Exception => log.warn(s"Failed to store message Id: $id", e)
+        false
+    }
+  }
+
+  override def remove[T](id: Long):Unit = {
+    persistentStore.delete(id.toString.getBytes)
   }
 
 }

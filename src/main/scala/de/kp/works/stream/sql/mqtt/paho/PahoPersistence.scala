@@ -1,4 +1,4 @@
-package de.kp.works.stream.sql.mqtt
+package de.kp.works.stream.sql.mqtt.paho
 /*
  * Copyright (c) 2020 - 2021 Dr. Krusche & Partner PartG. All rights reserved.
  *
@@ -18,38 +18,31 @@ package de.kp.works.stream.sql.mqtt
  *
  */
 
-import org.apache.spark.sql.Row
+import org.rocksdb.{Options, RocksDB}
+import java.util.Objects
 
-object MqttUtil {
-  /**
-   * This method transforms a certain [MqttEvent] into
-   * a sequence of schema compliant values
-   */
-  def toRows(event:MqttEvent, schemaType:String):Seq[Row] = {
+object PahoPersistence {
 
-    schemaType.toLowerCase match {
-      case "plain" =>
-        fromPlainValues(event)
-      case _ =>
-        throw new Exception(s"Schema type `$schemaType` is not supported.")
+  var persistence: RocksDB = _
+
+  def getOrCreate(path: String): RocksDB = {
+
+    if (Objects.isNull(persistence)) {
+      RocksDB.loadLibrary()
+      persistence = RocksDB.open(new Options().setCreateIfMissing(true), path)
+    }
+
+    persistence
+
+  }
+
+  def close(): Unit = {
+
+    if (!Objects.isNull(persistence)) {
+      persistence.close()
+      persistence = null
     }
 
   }
-
-  def fromPlainValues(event:MqttEvent):Seq[Row] = {
-
-    val seq = Seq(
-      event.id,
-      event.timestamp,
-      event.topic,
-      event.qos,
-      event.duplicate,
-      event.retained,
-      event.payload)
-
-    val row = Row.fromSeq(seq)
-    Seq(row)
-
-  }
-
 }
+
