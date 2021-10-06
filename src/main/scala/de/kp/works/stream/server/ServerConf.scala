@@ -54,7 +54,7 @@ object ServerConf {
         true
 
       } catch {
-        case t: Throwable =>
+        case _: Throwable =>
           false
       }
     }

@@ -1,5 +1,4 @@
 package de.kp.works.stream.sql.snowflake
-
 /*
  * Copyright (c) 2020 - 2021 Dr. Krusche & Partner PartG. All rights reserved.
  *
@@ -70,6 +69,7 @@ object SNOWFLAKE_STREAM_SETTINGS {
    */
   val SNOWFLAKE_MAX_RETRIES   = "snowflake.max.retries"
   val SNOWFLAKE_PRIMARY_KEY   = "snowflake.primary.key"
+  val SNOWFLAKE_REGION        = "snowflake.region"
   val SNOWFLAKE_ROLE          = "snowflake.role"
   val SNOWFLAKE_SCHEMA        = "snowflake.schema"
   /**

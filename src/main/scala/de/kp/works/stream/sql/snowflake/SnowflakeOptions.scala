@@ -93,7 +93,10 @@ class SnowflakeOptions(options: DataSourceOptions) extends Logging {
     /* The name of the Snowflake database */
     settings.getOrElse(SNOWFLAKE_STREAM_SETTINGS.SNOWFLAKE_DATABASE,
       throw new Exception(s"No Snowflake database name specified."))
-
+  /**
+   * The database url is a combination of account (name)
+   * and region
+   */
   def getDatabaseUrl:String = {
     /*
      * The connection url to a Snowflake cloud instance
@@ -102,7 +105,21 @@ class SnowflakeOptions(options: DataSourceOptions) extends Logging {
     val account = settings.getOrElse(SNOWFLAKE_STREAM_SETTINGS.SNOWFLAKE_ACCOUNT,
       throw new Exception(s"No Snowflake account name specified."))
 
-    s"$account.snowflakecomputing.com"
+    val region = settings.getOrElse(SNOWFLAKE_STREAM_SETTINGS.SNOWFLAKE_REGION,
+      "us-west-2")
+
+    /* Check whether the provided region is known */
+
+    if (SnowflakeRegionUtil.fromString(region) != null) {
+      /* The region is known */
+      if (region == "us-west-2")
+        s"$account.snowflakecomputing.com"
+
+      else
+        s"$account.$region.snowflakecomputing.com"
+    }
+    else
+      s"$account.$region.snowflakecomputing.com"
 
   }
 
