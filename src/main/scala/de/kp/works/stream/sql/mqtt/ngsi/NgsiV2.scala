@@ -21,26 +21,32 @@ package de.kp.works.stream.sql.mqtt.ngsi
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.types._
 
-object NgsiLD extends Ngsi {
+/**
+ * NSGI v2 support intends to transform messages from Works [FiwareBeat],
+ * i.e. notifications from a [FIWARE] Context Broker.
+ */
+object NgsiV2 extends Ngsi {
   /**
    * This method provides the Apache Spark SQL schema that
-   * is assigned to NGSI LD messages
+   * is assigned to NGSI V2 messages
    */
   def schema:StructType = {
     StructType(
-      StructField("creationTime", LongType, nullable = false) ::
-      StructField("service", StringType, nullable = false) ::
+      StructField("creationTime",LongType,   nullable = false) ::
+      StructField("service",     StringType, nullable = false) ::
       StructField("servicePath", StringType, nullable = false) ::
-      StructField("context",
-        ArrayType(StringType, containsNull = false), nullable = false) ::
-      StructField("entityId", StringType, nullable = false) ::
-      StructField("entityType", StringType, nullable = false) ::
-      StructField("attrName", StringType, nullable = false) ::
-      StructField("attrType", StringType, nullable = false) ::
-      StructField("attrValue", StringType, nullable = false) :: Nil
+      StructField("entityId",    StringType, nullable = false) ::
+      StructField("entityType",  StringType, nullable = false) ::
+      StructField("attrName",    StringType, nullable = false) ::
+      StructField("attrType",    StringType, nullable = false) ::
+      StructField("attrValue",   StringType, nullable = false) :: Nil
     )
   }
 
+  /**
+   * This method transforms a certain NGSI V2 message into
+   * a list Apache Spark [Row]s
+   */
   def transform(message:String):List[Row] = {
 
     val deserialized = deserialize(message)
@@ -62,10 +68,6 @@ object NgsiLD extends Ngsi {
 
               val entityId = entity("id").asInstanceOf[String]
               val entityType = entity("type").asInstanceOf[String]
-
-              val entityContext = entity
-                .getOrElse("@context", List("https://schema.lab.fiware.org/ld/context"))
-                .asInstanceOf[List[String]]
               /*
                * Retrieve attributes
                */
@@ -87,7 +89,6 @@ object NgsiLD extends Ngsi {
                     creationTime,
                     service,
                     servicePath,
-                    entityContext,
                     entityId,
                     entityType,
                     attrName,
@@ -98,7 +99,7 @@ object NgsiLD extends Ngsi {
 
                 }
 
-            })
+             })
           case _ =>
             throw new Exception(s"The provided message payload must be a List.")
         }
@@ -107,5 +108,4 @@ object NgsiLD extends Ngsi {
     }
 
   }
-
 }

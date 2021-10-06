@@ -19,7 +19,7 @@ package de.kp.works.stream.sql.sse
  */
 
 import de.kp.works.stream.sql.{Logging, LongOffset}
-import org.apache.spark.sql.SparkSession
+import org.apache.spark.sql.{Row, SparkSession}
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.sources.v2.reader.{InputPartition, InputPartitionReader}
 import org.apache.spark.sql.sources.v2.reader.streaming.{MicroBatchReader, Offset}
@@ -38,7 +38,7 @@ class SseSource(options: SseOptions)
   private var startOffset: Offset = _
   private var endOffset: Offset   = _
 
-  private val events = new TrieMap[Long, SseEvent]
+  private val events = new TrieMap[Long, Row]
 
   private val persistence = options.getPersistence
   private val store = new SseEventStore(persistence)
@@ -73,7 +73,7 @@ class SseSource(options: SseOptions)
     (lastOffsetCommitted.offset until newOffset.get.offset)
       .foreach { x =>
         events.remove(x + 1)
-        store.remove(x + 1)
+        store.remove[Row](x + 1)
       }
 
     lastOffsetCommitted = newOffset.get
@@ -94,13 +94,13 @@ class SseSource(options: SseOptions)
 
   override def planInputPartitions(): util.List[InputPartition[InternalRow]] = {
 
-    val rawEvents: IndexedSeq[SseEvent] = synchronized {
+    val rawEvents: IndexedSeq[Row] = synchronized {
 
       val sliceStart = LongOffset.convert(startOffset).get.offset + 1
       val sliceEnd   = LongOffset.convert(endOffset).get.offset + 1
 
       for (i <- sliceStart until sliceEnd) yield
-        events.getOrElse(i, store.retrieve[SseEvent](i))
+        events.getOrElse(i, store.retrieve[Row](i))
     }
 
     val spark = SparkSession.getActiveSession.get
@@ -108,7 +108,7 @@ class SseSource(options: SseOptions)
     /*
      * `slices` prepares the partitioned output
      */
-    val slices = Array.fill(numPartitions)(new ListBuffer[SseEvent])
+    val slices = Array.fill(numPartitions)(new ListBuffer[Row])
 
     rawEvents.zipWithIndex
       .foreach {case (rawEvent, index) => slices(index % numPartitions).append(rawEvent)}
@@ -117,7 +117,6 @@ class SseSource(options: SseOptions)
      * Note, the order of values must be compliant to the defined
      * schema
      */
-    val schemaType = options.getSchemaType
     (0 until numPartitions).map{i =>
 
       val slice = slices(i)
@@ -137,7 +136,7 @@ class SseSource(options: SseOptions)
                * [SseUtil] transforms the [SseEvent] into
                * a schema compliant sequence of values
                */
-              val values = SseUtil.getValues(slice(currentIdx), schemaType)
+              val values = slice(currentIdx).toSeq
               InternalRow(values)
             }
 
@@ -167,15 +166,17 @@ class SseSource(options: SseOptions)
   private def buildSseClient():Unit = {
 
     client = SseClient.build(options)
+    val schemaType = options.getSchemaType
 
     val expose = new SseExpose() {
 
       override def eventArrived(event:SseEvent): Unit =  synchronized {
 
         val offset = currentOffset.offset + 1L
-        events.put(offset, event)
+        val row = SseUtil.toRow(event, schemaType)
 
-        store.store(offset, event)
+        events.put(offset, row)
+        store.store[Row](offset, row)
 
         currentOffset = LongOffset(offset)
         log.trace(s"Event arrived, ${event.sseType} ${event.sseData}")

@@ -1,4 +1,7 @@
 package de.kp.works.stream.sql.sse
+
+import org.apache.spark.sql.Row
+
 /*
  * Copyright (c) 2020 - 2021 Dr. Krusche & Partner PartG. All rights reserved.
  *
@@ -21,13 +24,13 @@ package de.kp.works.stream.sql.sse
 object SseUtil {
   /**
    * This method transforms a certain [SseEvent] into
-   * a sequence of schema compliant values
+   * a Spark SQL compliant [Row]
    */
-  def getValues(event:SseEvent, schemaType:String):Seq[Any] = {
+  def toRow(event:SseEvent, schemaType:String):Row = {
 
     schemaType.toLowerCase match {
       case "plain" =>
-        getPlainValues(event)
+        fromPlainValues(event)
       case _ =>
         throw new Exception(s"Schema type `$schemaType` is not supported.")
     }
@@ -40,11 +43,14 @@ object SseUtil {
    * - type
    * - data
    */
-  def getPlainValues(event:SseEvent):Seq[Any] = {
-    Seq(
+  def fromPlainValues(event:SseEvent):Row = {
+
+    val seq = Seq(
       event.sseId,
       event.sseType,
       event.sseData)
+
+    Row.fromSeq(seq)
 
   }
 

@@ -58,7 +58,7 @@ class SseClient(options:SseOptions) extends Logging {
       }
 
       override def onEvent(eventSource:EventSource, id:String, `type`:String, data:String):Unit = {
-        val event = new SseEvent(id, `type`, data)
+        val event = SseEvent(id, `type`, data)
         expose.eventArrived(event)
       }
 
