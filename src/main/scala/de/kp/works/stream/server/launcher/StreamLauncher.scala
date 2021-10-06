@@ -1,4 +1,4 @@
-package de.kp.works.stream.launcher
+package de.kp.works.stream.server.launcher
 /*
  * Copyright (c) 2019 Dr. Krusche & Partner PartG. All rights reserved.
  *
