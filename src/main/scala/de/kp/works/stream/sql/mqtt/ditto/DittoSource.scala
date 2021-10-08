@@ -167,7 +167,10 @@ class DittoSource(options: DittoOptions)
     val expose = new DittoExpose() {
 
       override def messageArrived(message:DittoMessage): Unit =  synchronized {
-
+        /*
+         * An incoming Eclipse Ditto message is exploded
+         * and represented as a sequence of [Row]s.
+         */
         val rows = DittoUtil.toRows(message, schemaType)
         rows.foreach(row => {
 

@@ -44,54 +44,61 @@ object DittoSchema {
 
   }
 
-  private def getFeatureSchema:StructType = {
+  private def featureType:StructType = {
+    /*
+     * This is an embedded and shorted version
+     * of the feature schema defined below.
+     */
+    StructType(
+      StructField("featureId",  StringType, nullable = false) ::
+      StructField("properties", ArrayType(propertyType, containsNull = false), nullable = true) :: Nil
+    )
+
+  }
+  private def propertyType:StructType = {
     /*
      * A property representation consists of a
      * property name, data type and serialized
      * value
      */
-    val propertyType = StructType(
+    StructType(
       StructField("name", StringType, nullable = false) ::
       StructField("type", StringType, nullable = false) ::
       StructField("value", StringType, nullable = true) :: Nil
     )
 
-    val fields = StructType(
+  }
+  private def getFeatureSchema:StructType = {
+
+    StructType(
       StructField("id", StringType, nullable = false) ::
       StructField("timestamp",  LongType, nullable = false) ::
       StructField("featureId",  StringType, nullable = false) ::
       StructField("properties", ArrayType(propertyType, containsNull = false), nullable = true) :: Nil
     )
 
-    fields
-
   }
 
   private def getFeaturesSchema:StructType = {
 
-    val fields:Array[StructField] = Array(
-      StructField("id",        StringType, nullable = false),
-      StructField("timestamp", LongType, nullable = false),
-      StructField("features",  ArrayType(StringType, containsNull = false), nullable = true)
+    StructType(
+      StructField("id", StringType, nullable = false) ::
+      StructField("timestamp", LongType, nullable = false) ::
+      StructField("features",  ArrayType(featureType, containsNull = false), nullable = true) :: Nil
     )
-
-    StructType(fields)
-
 
   }
 
   private def getMessageSchema:StructType = {
 
-    val fields:Array[StructField] = Array(
-      StructField("id",        StringType, nullable = false),
-      StructField("timestamp", LongType, nullable = false),
-      StructField("name",      StringType, nullable = true),
-      StructField("namespace", StringType, nullable = true),
-      StructField("subject",   StringType, nullable = true),
-      StructField("payload",   StringType, nullable = true)
+    StructType(
+      StructField("id", StringType, nullable = false) ::
+      StructField("timestamp", LongType, nullable = false) ::
+      StructField("name", StringType, nullable = true) ::
+      StructField("namespace", StringType, nullable = true) ::
+      StructField("subject", StringType, nullable = true) ::
+      StructField("payload", StringType, nullable = true) :: Nil
     )
-
-    StructType(fields)
 
   }
 
@@ -101,27 +108,23 @@ object DittoSchema {
    */
   private def getPlainSchema: StructType = {
 
-    val fields:Array[StructField] = Array(
-      StructField("id",      StringType, nullable = false),
-      StructField("type",    StringType, nullable = false),
-      StructField("payload", StringType, nullable = true)
+    StructType(
+      StructField("id", StringType, nullable = false) ::
+      StructField("type", StringType, nullable = false) ::
+      StructField("payload", StringType, nullable = true) :: Nil
     )
-
-    StructType(fields)
 
   }
 
   private def getThingSchema:StructType = {
 
-    val fields:Array[StructField] = Array(
-      StructField("id",        StringType, nullable = false),
-      StructField("timestamp", LongType, nullable = false),
-      StructField("name",      StringType, nullable = true),
-      StructField("namespace", StringType, nullable = true),
-      StructField("features",  ArrayType(StringType, containsNull = false), nullable = true)
+    StructType(
+      StructField("id", StringType, nullable = false) ::
+      StructField("timestamp", LongType, nullable = false) ::
+      StructField("name", StringType, nullable = true) ::
+      StructField("namespace", StringType, nullable = true) ::
+      StructField("features",  ArrayType(featureType, containsNull = false), nullable = true) :: Nil
     )
-
-    StructType(fields)
 
   }
 

@@ -24,7 +24,7 @@ import org.eclipse.ditto.model.base.json.JsonSchemaVersion
 import com.neovisionaries.ws.client.WebSocket
 
 object DittoHelper {
-  
+
   def getMessagingProvider(options:DittoOptions): MessagingProvider = {
     
     val builder = WebSocketMessagingConfiguration.newBuilder()
@@ -113,7 +113,7 @@ object DittoHelper {
       }
 
     }
-     
+
   }
   
 }

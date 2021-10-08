@@ -105,7 +105,7 @@ object DittoUtil {
    *
    * - id
    * - timestamp
-   * - features (Array of serialized)
+   * - features (Array of feature)
    */
   def fromFeaturesValues(message:DittoMessage):Seq[Row] = {
 
@@ -116,18 +116,46 @@ object DittoUtil {
 
     val timestamp = json.get("timestamp").getAsLong
     /*
-     * Serialize each feature
+     * Transform each feature into a Row
      */
     val features  = json.get("features").getAsJsonArray
-      .map(_.toString).toArray
+      .map(feature2Row)
+      .toArray
 
-    // TODO Explode into multiple rows
     val seq = Seq(id, timestamp, features)
     val row = Row.fromSeq(seq)
 
     Seq(row)
   }
+  /**
+   * A helper method to transform a Ditto feature
+   * from JSON to a Spark SQL Row. In contrast to
+   * `fromFeatureValues`, this method is intended
+   * supported features & things changes:
+   *
+   * - featureId
+   * - properties [
+   *     {
+   *        - name
+   *        - type
+   *        - value (serialized)
+   *     }
+   *   ]
+   */
+  private def feature2Row(feature:JsonElement):Row = {
 
+    val jsonObject = feature.getAsJsonObject
+
+    val featureId = jsonObject.get("id").getAsString
+    val properties = jsonObject.get("properties")
+      .getAsJsonArray
+      .map(property2Row)
+      .toArray
+
+    val seq = Seq(featureId, properties)
+    Row.fromSeq(seq)
+
+  }
   /**
    * The value representation of a certain live message:
    *
@@ -182,7 +210,7 @@ object DittoUtil {
    * - timestamp
    * - name
    * - namespace
-   * - features (Array of serialized)
+   * - features (Array of feature)
    */
   def fromThingValues(message:DittoMessage):Seq[Row] = {
 
@@ -195,12 +223,12 @@ object DittoUtil {
 
     val name = json.get("name").getAsString
     val namespace = json.get("namespace").getAsString
-
     /*
-     * Serialize each feature
+     * Transform each feature into a Row
      */
     val features  = json.get("features").getAsJsonArray
-      .map(_.toString).toArray
+      .map(feature2Row)
+      .toArray
 
     val seq = Seq(id, timestamp, name, namespace, features)
     val row = Row.fromSeq(seq)

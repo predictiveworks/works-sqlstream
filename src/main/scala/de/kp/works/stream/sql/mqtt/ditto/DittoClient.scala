@@ -98,12 +98,13 @@ class DittoClient(options:DittoOptions) extends Logging {
      * is initiated in the live's doStartConsumption method
      * 
      */
-    client.twin().startConsumption().get() // EVENTS
-    client.live().startConsumption().get() // MESSAGES
-    
+
     registerForTwinEvents()
     registerForLiveMessages()
-    
+
+    client.twin().startConsumption().get() // EVENTS
+    client.live().startConsumption().get() // MESSAGES
+
   }
   /**
    * This is the Ditto callback to listen to twin events
