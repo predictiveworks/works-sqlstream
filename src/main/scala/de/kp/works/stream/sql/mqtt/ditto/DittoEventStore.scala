@@ -108,7 +108,7 @@ class DittoEventStore(
 
   /** Retrieve event corresponding to a given id. */
   override def retrieve[T](id: Long): T = {
-    serializer.deserialize(get(id))
+    serializer.deserialize[T](get(id))
   }
 
   override def store[T](id: Long, message: T): Boolean = {
