@@ -1,7 +1,4 @@
 package de.kp.works.stream.sql.sse
-
-import org.apache.spark.sql.Row
-
 /*
  * Copyright (c) 2020 - 2021 Dr. Krusche & Partner PartG. All rights reserved.
  *
@@ -21,21 +18,142 @@ import org.apache.spark.sql.Row
  *
  */
 
+import com.google.gson.{JsonElement, JsonParser}
+import de.kp.works.stream.sql.sse.transform._
+import org.apache.spark.sql.Row
+
 object SseUtil {
   /**
    * This method transforms a certain [SseEvent] into
    * a Spark SQL compliant [Row]
    */
-  def toRows(event:SseEvent, schemaType:String):Seq[Row] = {
+  def toRows(event:SseEvent, schemaType:String):Option[Seq[Row]] = {
+    /*
+     * The current implementation distinguishes between
+     * SSE events that originate from one of the Works
+     * Beats and other sources
+     */
+    if (schemaType.startsWith("beats")) {
+      /*
+       * A Works Beat event in this scenario is limited
+       * to a certain event schema, i.e. a mix of multiple
+       * event formats cannot be supported here.
+       */
+      fromBeatsValues(event)
 
-    schemaType.toLowerCase match {
-      case "plain" =>
-        fromPlainValues(event)
-      case _ =>
-        throw new Exception(s"Schema type `$schemaType` is not supported.")
+    } else
+      /*
+       * The provided SSE event contains data that are
+       * either different from those provided by one of
+       * the different Works Beats, or,
+       *
+       * combines events with multiple schemas
+       */
+      fromPlainValues(event)
+
+  }
+  /**
+   * This method tries to resolve events originating
+   * from one of Works Beats via SSE channel with the
+   * best matching representation
+   */
+  def fromBeatsValues(event:SseEvent):Option[Seq[Row]] = {
+    /*
+     * Check whether the event type provided with
+     * this event originates from a Works Beat
+     */
+    val beat = try {
+      Beats.withName(event.sseType.toLowerCase)
+
+    } catch {
+      case _:Throwable => null
+    }
+
+    if (beat == null) fromPlainValues(event)
+    else {
+      /*
+       * The SSE event format contains the serialized
+       * payload `sseData`, which comes with a unified
+       * format:
+       *
+       * {
+       *   type : ...,
+       *   event: ...
+       * }
+       *
+       */
+      val (eventType, eventData) = unpackEvent(event)
+      /*
+       * Validate whether `eventType` and detected
+       * beat are compliant. Sample:
+       *
+       *           beat/fiware/notification
+       */
+      val tokens = eventType.split("\\/")
+      if (tokens(1) != beat.toString)
+        throw new Exception("SSE type and Works Beat specification are inconsistent.")
+      /*
+       * Transform the received SSE event into a
+       * Beat and schema-compliant representation.
+       */
+      beat match {
+        case Beats.FIWARE =>
+          /*
+           * Events that originate from a Fiware Context
+           * Broker have a common NGSI-compliant format,
+           * and can be described with a single schema
+           */
+          FiwareTransform.fromValues(eventType, eventData)
+
+        case Beats.FLEET =>
+          FleetTransform.fromValues(eventType, eventData)
+
+        case Beats.OPCUA =>
+          OpcUaTransform.fromValues(eventType, eventData)
+
+        case Beats.OPENCTI =>
+          CTITransform.fromValues(eventType, eventData)
+
+        case Beats.OSQUERY =>
+         TLSTransform.fromValues(eventType, eventData)
+
+        case Beats.THINGS =>
+          ThingsTransform.fromValues(eventType, eventData)
+
+        case Beats.ZEEK =>
+          ZeekTransform.fromValues(eventType, eventData)
+
+        case _ =>
+          throw new Exception(s"The provided Works Beat is not supported.")
+
+      }
+
     }
 
   }
+
+  private def unpackEvent(event:SseEvent):(String, JsonElement) = {
+    /*
+     * The SSE event format contains the serialized
+     * payload `sseData`, which comes with a unified
+     * format:
+     *
+     * {
+     *   type : ...,
+     *   event: ...
+     * }
+     */
+    val json = JsonParser.parseString(event.sseData)
+      .getAsJsonObject
+
+    val eventType = json.get("type").getAsString
+    val eventData = JsonParser
+      .parseString(json.get("event").getAsString)
+
+    (eventType, eventData)
+
+  }
+
   /**
    * The default and generic value representation
    *
@@ -43,7 +161,7 @@ object SseUtil {
    * - type
    * - data
    */
-  def fromPlainValues(event:SseEvent):Seq[Row] = {
+  def fromPlainValues(event:SseEvent):Option[Seq[Row]] = {
 
     val seq = Seq(
       event.sseId,
@@ -51,7 +169,8 @@ object SseUtil {
       event.sseData)
 
     val row = Row.fromSeq(seq)
-    Seq(row)
+    Some(Seq(row))
+
   }
 
 }

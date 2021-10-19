@@ -171,18 +171,25 @@ class SseSource(options: SseOptions)
     val expose = new SseExpose() {
 
       override def eventArrived(event:SseEvent): Unit =  synchronized {
-
+        /*
+         * This method transforms an incoming SseEvent into
+         * a schema compliant row
+         */
         val rows = SseUtil.toRows(event, schemaType)
-        rows.foreach(row => {
 
-          val offset = currentOffset.offset + 1L
+        if (rows.isDefined) {
+          rows.get.foreach(row => {
 
-          events.put(offset, row)
-          store.store[Row](offset, row)
+            val offset = currentOffset.offset + 1L
 
-          currentOffset = LongOffset(offset)
+            events.put(offset, row)
+            store.store[Row](offset, row)
 
-        })
+            currentOffset = LongOffset(offset)
+
+          })
+
+        }
 
         log.trace(s"Event arrived, ${event.sseType} ${event.sseData}")
 

@@ -96,7 +96,10 @@ abstract class BaseActor extends Actor with Logging {
     }
 
   override def receive: Receive = {
-
+    /*
+     * Receive HTTP(s) request to start or manage
+     * streaming applications.
+     */
     case request:HttpRequest =>
       sender ! Response(Try({
         execute(request)

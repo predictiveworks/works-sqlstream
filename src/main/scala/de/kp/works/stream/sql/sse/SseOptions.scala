@@ -54,7 +54,9 @@ class SseOptions(options: DataSourceOptions) extends Logging {
   }
 
   def getSchemaType:String =
-    settings.getOrElse(SSE_STREAM_SETTINGS.SCHEMA_TYPE, "plain")
+    settings
+      .getOrElse(SSE_STREAM_SETTINGS.SCHEMA_TYPE, "plain")
+      .toLowerCase
 
   def getServerUrl:String = {
     val url = settings.get(SSE_STREAM_SETTINGS.SERVER_URL)

@@ -22,7 +22,10 @@ import de.kp.works.stream.sql.Logging
 import org.apache.spark.launcher.{SparkAppHandle, SparkLauncher}
 
 import scala.collection.mutable
-
+/**
+ * [StreamLauncher] is a wrapper for Apache Spark's [SparkLauncher]
+ * to submit streaming applications to a Spark cluster.
+ */
 class StreamLauncher(options:LaunchOptions) extends Logging {
 
   private var appName:String = _
