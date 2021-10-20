@@ -1,4 +1,4 @@
-package de.kp.works.stream.sql.mqtt.ngsi
+package de.kp.works.stream.sql.mqtt.transform
 /*
  * Copyright (c) 2020 - 2021 Dr. Krusche & Partner PartG. All rights reserved.
  *
@@ -18,54 +18,45 @@ package de.kp.works.stream.sql.mqtt.ngsi
  *
  */
 
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.module.scala.DefaultScalaModule
 import org.apache.spark.sql.Row
-import org.apache.spark.sql.types._
 
-object NgsiLD extends Ngsi {
-  /**
-   * This method provides the Apache Spark SQL schema that
-   * is assigned to NGSI LD messages
-   */
-  def schema:StructType = {
-    StructType(
-      StructField("creationTime", LongType, nullable = false) ::
-      StructField("service", StringType, nullable = false) ::
-      StructField("servicePath", StringType, nullable = false) ::
-      StructField("context",
-        ArrayType(StringType, containsNull = false), nullable = false) ::
-      StructField("entityId", StringType, nullable = false) ::
-      StructField("entityType", StringType, nullable = false) ::
-      StructField("attrName", StringType, nullable = false) ::
-      StructField("attrType", StringType, nullable = false) ::
-      StructField("attrValue", StringType, nullable = false) :: Nil
-    )
-  }
+object FiwareTransform {
 
-  def transform(message:String):List[Row] = {
+  protected val mapper = new ObjectMapper()
+  mapper.registerModule(DefaultScalaModule)
 
-    val deserialized = deserialize(message)
+  def transform(mqttEvent:String):Seq[Row] = {
+
+    val deserialized = deserialize(mqttEvent)
 
     val service = deserialized("service").asInstanceOf[String]
     val servicePath = deserialized("servicePath").asInstanceOf[String]
 
-    val payload = deserialized("payload")
-    payload match {
+    val payload = deserialized("payload").asInstanceOf[Map[String, Any]]
+    /*
+     * We expect 2 fields, `subscriptionId` and `data`
+     */
+    val subscription = payload("subscriptionId").asInstanceOf[String]
+    val data = payload("data")
+
+    data match {
       case values: List[_] =>
         val head = values.head
         head match {
           case _: Map[_, _] =>
 
-            val creationTime = System.currentTimeMillis
-
-            val entities = payload.asInstanceOf[List[Map[String, _]]]
+            val entities = data.asInstanceOf[List[Map[String, _]]]
             entities.flatMap(entity => {
 
               val entityId = entity("id").asInstanceOf[String]
               val entityType = entity("type").asInstanceOf[String]
 
-              val entityContext = entity
+              val entityCtx = entity
                 .getOrElse("@context", List("https://schema.lab.fiware.org/ld/context"))
                 .asInstanceOf[List[String]]
+
               /*
                * Retrieve attributes
                */
@@ -73,39 +64,49 @@ object NgsiLD extends Ngsi {
                 .filterKeys(x => x != "id" & x!= "type" )
                 .map{case(k,v) =>
 
-                  val attrValSpec = v.asInstanceOf[Map[String,Any]]
+                  val attr = v.asInstanceOf[Map[String,Any]]
 
                   val attrName = k
-                  val attrType = attrValSpec.getOrElse("type", "NULL").asInstanceOf[String]
+                  val attrType = attr.getOrElse("type", "NULL").asInstanceOf[String]
 
-                  val attrValu = attrValSpec.get("value") match {
+                  val attrValu = attr.get("value") match {
                     case Some(v) => mapper.writeValueAsString(v)
                     case _ => ""
                   }
 
-                  val seq = Seq(
-                    creationTime,
+                  val metadata = attr.get("metadata") match {
+                    case Some(v) => mapper.writeValueAsString(v)
+                    case _ => ""
+                  }
+
+                  val values = Seq(
+                    subscription,
                     service,
                     servicePath,
-                    entityContext,
                     entityId,
                     entityType,
                     attrName,
                     attrType,
-                    attrValu)
+                    attrValu,
+                    metadata,
+                    entityCtx)
 
-                  Row.fromSeq(seq)
+                  Row.fromSeq(values)
 
                 }
 
             })
           case _ =>
-            throw new Exception(s"The provided message payload must be a List.")
+            throw new Exception(s"The provided entities must be a List.")
         }
       case _ =>
-        throw new Exception(s"The provided message payload must be a List.")
+        throw new Exception(s"The provided entities must be a List.")
     }
 
+  }
+
+  private def deserialize(message:String):Map[String, Any] = {
+    mapper.readValue(message, classOf[Map[String, Any]])
   }
 
 }
