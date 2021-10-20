@@ -18,8 +18,8 @@ package de.kp.works.stream.sql.sse
  *
  */
 
-import com.google.gson.{JsonElement, JsonParser}
 import de.kp.works.stream.sql.sse.transform._
+import de.kp.works.transform.fiware.FiwareTransform
 import org.apache.spark.sql.Row
 
 object SseUtil {
@@ -82,7 +82,8 @@ object SseUtil {
        * }
        *
        */
-      val (eventType, eventData) = unpackEvent(event)
+      val (eventType, eventData) =
+        FiwareTransform.deserialize(event.sseData)
       /*
        * Validate whether `eventType` and detected
        * beat are compliant. Sample:
@@ -129,28 +130,6 @@ object SseUtil {
       }
 
     }
-
-  }
-
-  private def unpackEvent(event:SseEvent):(String, JsonElement) = {
-    /*
-     * The SSE event format contains the serialized
-     * payload `sseData`, which comes with a unified
-     * format:
-     *
-     * {
-     *   type : ...,
-     *   event: ...
-     * }
-     */
-    val json = JsonParser.parseString(event.sseData)
-      .getAsJsonObject
-
-    val eventType = json.get("type").getAsString
-    val eventData = JsonParser
-      .parseString(json.get("event").getAsString)
-
-    (eventType, eventData)
 
   }
 

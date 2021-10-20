@@ -1,4 +1,4 @@
-package de.kp.works.stream.sql.sse.transform
+package de.kp.works.transform.fiware
 /*
  * Copyright (c) 2020 - 2021 Dr. Krusche & Partner PartG. All rights reserved.
  *
@@ -20,7 +20,8 @@ package de.kp.works.stream.sql.sse.transform
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.scala.DefaultScalaModule
-import com.google.gson.JsonElement
+import com.google.gson.{JsonElement, JsonParser}
+import de.kp.works.stream.sql.sse.transform.BaseTransform
 import org.apache.spark.sql.Row
 
 import scala.collection.JavaConversions._
@@ -35,7 +36,22 @@ object FiwareTransform extends BaseTransform {
   private val mapper = new ObjectMapper()
   mapper.registerModule(DefaultScalaModule)
 
-  def fromValues(eventType:String, eventData:JsonElement):Option[Seq[Row]] = {
+  /**
+   * This method supports the transformation of Fiware events
+   * that are published by the Fiware Beat via the MQTT channel
+   */
+  def fromValues(event:String): Option[Seq[Row]] = {
+
+    val (eventType, eventData) = deserialize(event)
+    fromValues(eventType, eventData)
+
+  }
+  /**
+   * This method supports the transformation of Fiware events
+   * that are published by the Fiware Beat via the SSE channel
+   */
+  def fromValues(eventType: String, eventData: JsonElement): Option[Seq[Row]] = {
+
     try {
       /*
        * The `eventType` parameter is not used here, as it specifies
@@ -51,7 +67,7 @@ object FiwareTransform extends BaseTransform {
        * We expect 2 fields, `subscriptionId` and `data`
        */
       val subscription = payload.get("subscriptionId").getAsString
-      val entities = jsonObj.get("data").getAsJsonArray
+      val entities = payload.get("data").getAsJsonArray
 
       val rows = entities.flatMap(elem => {
 
@@ -108,13 +124,40 @@ object FiwareTransform extends BaseTransform {
         })
 
       })
-      .toSeq
+        .toSeq
 
       Some(rows)
 
     } catch {
-      case _:Throwable => None
+      case _: Throwable => None
     }
+  }
+
+  def deserialize(event:String): (String, JsonElement) = {
+    /*
+     * The SSE event comes with a unified format:
+     *
+     * {
+     *   type : ...,
+     *   event: {
+     *     service: ...,
+     *     servicePath: ...,
+     *     payload: {
+     *       data: [...],
+     *       subscriptionId: ...
+     *     }
+     *   }
+     * }
+     */
+    val json = JsonParser.parseString(event)
+      .getAsJsonObject
+
+    val eventType = json.get("type").getAsString
+    val eventData = JsonParser
+      .parseString(json.get("event").getAsString)
+
+    (eventType, eventData)
+
   }
 
 }
