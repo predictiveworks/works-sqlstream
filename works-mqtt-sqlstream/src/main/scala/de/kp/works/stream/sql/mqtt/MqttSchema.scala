@@ -24,7 +24,7 @@ import org.apache.spark.sql.types._
 object MqttSchema {
 
   def getSchema(schemaType:String):StructType = {
-
+    // TODO BEATS Integration
     schemaType.toLowerCase match {
       case "plain" => getPlainSchema
       case _ =>

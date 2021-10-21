@@ -27,7 +27,7 @@ object MqttUtil {
    * a sequence of schema compliant values
    */
   def toRows(event:MqttEvent, schemaType:String):Seq[Row] = {
-
+    // TODO BEATS Integration
     schemaType.toLowerCase match {
       case "plain" =>
         fromPlainValues(event)
