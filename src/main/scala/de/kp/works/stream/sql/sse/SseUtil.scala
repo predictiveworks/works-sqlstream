@@ -125,6 +125,13 @@ object SseUtil {
          TLSTransform.fromValues(eventType, eventData)
 
         case Beats.THINGS =>
+          /*
+           * Events originate from ThingsBoard's gateway
+           * service and describe device attribute changes.
+           *
+           * The [ThingsBeat] normalizes gateway events
+           * similar to the Fiware format.
+           */
           ThingsTransform.fromValues(eventType, eventData)
 
         case Beats.ZEEK =>

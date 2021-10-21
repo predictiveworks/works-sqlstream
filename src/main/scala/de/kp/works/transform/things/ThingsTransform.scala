@@ -25,7 +25,44 @@ import org.apache.spark.sql.Row
 object ThingsTransform extends BaseTransform {
 
   def fromValues(eventType: String, eventData: JsonElement): Option[Seq[Row]] = {
-    ???
+
+    try {
+
+      val event = mapper.readValue(eventData.toString, classOf[Map[String, Any]])
+
+      val entityId = event("id").asInstanceOf[String]
+      val entityType = event("type").asInstanceOf[String]
+
+      val rows = event
+        .filter{case(k,_) => k != "id" && k != "type"}
+        .map{case(k, v) => {
+
+          val attrName = k
+          val attrObj = v.asInstanceOf[Map[String, Any]]
+
+          val attrType = attrObj.getOrElse("type", "NULL").asInstanceOf[String]
+          val attrValu = attrObj.get("value") match {
+            case Some(value) => mapper.writeValueAsString(value)
+            case _ => ""
+          }
+          val values = Seq(
+            entityId,
+            entityType,
+            attrName,
+            attrType,
+            attrValu)
+
+          Row.fromSeq(values)
+
+        }}
+        .toSeq
+
+      Some(rows)
+
+    } catch {
+      case _:Throwable => None
+    }
+
   }
 
 }

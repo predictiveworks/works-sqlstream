@@ -55,24 +55,24 @@ object TransformUtil extends Serializable {
        * Basic data types: these data type descriptions
        * are harmonized with [ValueType]
        */
-      case _: BigDecimal => "DECIMAL"
-      case _: Boolean => "BOOLEAN"
-      case _: Byte => "BYTE"
-      case _: Double => "DOUBLE"
-      case _: Float => "FLOAT"
-      case _: Int => "INT"
-      case _: Long => "LONG"
-      case _: Short => "SHORT"
-      case _: String => "STRING"
+      case _: BigDecimal => "BigDecimal"
+      case _: Boolean => "Boolean"
+      case _: Byte => "Byte"
+      case _: Double => "Double"
+      case _: Float => "Float"
+      case _: Int => "Int"
+      case _: Long => "Long"
+      case _: Short => "Short"
+      case _: String => "String"
       /*
        * Datetime support
        */
-      case _: java.sql.Date => "DATE"
-      case _: java.sql.Timestamp => "TIMESTAMP"
-      case _: java.util.Date => "DATE"
-      case _: java.time.LocalDate => "DATE"
-      case _: java.time.LocalDateTime => "DATE"
-      case _: java.time.LocalTime => "TIMESTAMP"
+      case _: java.sql.Date => "Date"
+      case _: java.sql.Timestamp => "Timestamp"
+      case _: java.util.Date => "Date"
+      case _: java.time.LocalDate => "Date"
+      case _: java.time.LocalDateTime => "Date"
+      case _: java.time.LocalTime => "Timestamp"
 
       case _ =>
         val now = new java.util.Date().toString

@@ -20,6 +20,7 @@ package de.kp.works.stream.sql.sse
 
 import de.kp.works.transform.fiware.FiwareSchema
 import de.kp.works.transform.opcua.OpcUaSchema
+import de.kp.works.transform.things.ThingsSchema
 import org.apache.spark.sql.types._
 
 object SseSchema {
@@ -74,7 +75,7 @@ object SseSchema {
       case Beats.FLEET =>
         /*
          * Fleet events distinguish between 200+
-         * Osquery table formats
+         * Osquery table formats (TODO)
          */
         getPlainSchema
 
@@ -86,17 +87,28 @@ object SseSchema {
         OpcUaSchema.schema()
 
       case Beats.OPENCTI =>
+        // TODO
         getPlainSchema
+
       case Beats.OSQUERY =>
+        // TODO
         getPlainSchema
+
       case Beats.THINGS =>
-        getPlainSchema
+        /*
+         * ThingsBoard gateway events describe changes
+         * of device attributes and have a common schema
+         * for all events.
+         */
+        ThingsSchema.schema()
+
       case Beats.ZEEK =>
         /*
          * Zeek events distinguish between 35+
-         * Zeek log formats
+         * Zeek log formats (TODO)
          */
         getPlainSchema
+
       case _ =>
         /* This should never happen */
         throw new Exception(s"The provided Works Beat is not supported.")
