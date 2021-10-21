@@ -2,93 +2,19 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <parent>
+        <artifactId>works-sqlstream</artifactId>
+        <groupId>de.kp.works</groupId>
+        <version>0.4.3</version>
+    </parent>
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>de.kp.works</groupId>
-    <artifactId>works-sqlstream</artifactId>
-    <packaging>pom</packaging>
-    <version>0.4.3</version>
-    <modules>
-        <module>works-transform-sqlstream</module>
-        <module>works-sse-sqlstream</module>
-        <module>works-ssl-sqlstream</module>
-        <module>works-common-sqlstream</module>
-        <module>works-aerospike-sqlstream</module>
-        <module>works-ml-sqlstream</module>
-        <module>works-server-sqlstream</module>
-        <module>works-akka-sqlstream</module>
-        <module>works-ignite-sqlstream</module>
-        <module>works-exasol-sqlstream</module>
-        <module>works-redshift-sqlstream</module>
-        <module>works-hana-sqlstream</module>
-        <module>works-snowflake-sqlstream</module>
-        <module>works-mqtt-sqlstream</module>
-    </modules>
-
-    <name>Works SqlStream</name>
-    <description>
-        Works SqlStream is the structured streaming module for PredictiveWorks.
-        It is made to support streaming source that are not covered by Apache
-        Spark Streaming.
-    </description>
+    <artifactId>works-transform-sqlstream</artifactId>
 
     <properties>
-        <maven.compiler.source>1.8</maven.compiler.source>
-        <maven.compiler.target>1.8</maven.compiler.target>
-
-        <config.version>1.4.1</config.version>
-        <gson.version>2.8.6</gson.version>
-        <rocksdb.version>6.6.4</rocksdb.version>
-
-        <!--
-        The Scala version that has been used for testing
-        in 2.11.12
-        -->
-        <scala.binary.version>2.11</scala.binary.version>
-
-        <!--
-        Leveraging this project in a Google CDAP environment
-        requires this version of Apache Spark
-        -->
-        <spark.version>2.4.7</spark.version>
-
+        <maven.compiler.source>8</maven.compiler.source>
+        <maven.compiler.target>8</maven.compiler.target>
     </properties>
-
-    <dependencies>
-
-        <!-- CONFIG
-        -->
-        <dependency>
-            <groupId>com.typesafe</groupId>
-            <artifactId>config</artifactId>
-            <version>${config.version}</version>
-        </dependency>
-
-        <!-- JSON
-        -->
-        <dependency>
-            <groupId>com.google.code.gson</groupId>
-            <artifactId>gson</artifactId>
-            <version>${gson.version}</version>
-        </dependency>
-
-        <!-- ROCKSDB
-        -->
-        <dependency>
-            <groupId>org.rocksdb</groupId>
-            <artifactId>rocksdbjni</artifactId>
-            <version>${rocksdb.version}</version>
-        </dependency>
-
-        <!-- SPARK SQL
-        -->
-        <dependency>
-            <groupId>org.apache.spark</groupId>
-            <artifactId>spark-sql_${scala.binary.version}</artifactId>
-            <version>${spark.version}</version>
-         </dependency>
-
-    </dependencies>
 
     <build>
         <sourceDirectory>src/main/scala</sourceDirectory>
