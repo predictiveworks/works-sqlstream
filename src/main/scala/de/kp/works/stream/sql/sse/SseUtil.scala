@@ -18,8 +18,14 @@ package de.kp.works.stream.sql.sse
  *
  */
 
-import de.kp.works.stream.sql.sse.transform._
+import de.kp.works.transform.TransformUtil
 import de.kp.works.transform.fiware.FiwareTransform
+import de.kp.works.transform.fleet.FleetTransform
+import de.kp.works.transform.opcua.OpcUaTransform
+import de.kp.works.transform.opencti.CTITransform
+import de.kp.works.transform.things.ThingsTransform
+import de.kp.works.transform.tls.TLSTransform
+import de.kp.works.transform.zeek.ZeekTransform
 import org.apache.spark.sql.Row
 
 object SseUtil {
@@ -83,7 +89,7 @@ object SseUtil {
        *
        */
       val (eventType, eventData) =
-        FiwareTransform.deserialize(event.sseData)
+        TransformUtil.deserializeSSE(event.sseData)
       /*
        * Validate whether `eventType` and detected
        * beat are compliant. Sample:

@@ -1,5 +1,4 @@
-package de.kp.works.stream.sql.sse.transform
-
+package de.kp.works.transform.tls
 /*
  * Copyright (c) 2020 - 2021 Dr. Krusche & Partner PartG. All rights reserved.
  *
@@ -20,17 +19,12 @@ package de.kp.works.stream.sql.sse.transform
  */
 
 import com.google.gson.JsonElement
+import de.kp.works.transform.BaseTransform
 import org.apache.spark.sql.Row
 
-object ZeekTransform extends BaseTransform {
+object TLSTransform extends BaseTransform {
 
-  def fromValues(eventType:String, eventData:JsonElement):Option[Seq[Row]] = {
-    /*
-     * The tail (or last) element of the event type
-     * value specifies the format of the Zeek log
-     */
-    val format = eventType.split("\\/").last
-
+  def fromValues(eventType: String, eventData: JsonElement): Option[Seq[Row]] = {
     ???
   }
 

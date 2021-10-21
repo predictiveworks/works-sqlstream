@@ -1,4 +1,4 @@
-package de.kp.works.stream.sql.mqtt.ttn
+package de.kp.works.transform.zeek
 /*
  * Copyright (c) 2020 - 2021 Dr. Krusche & Partner PartG. All rights reserved.
  *
@@ -18,6 +18,20 @@ package de.kp.works.stream.sql.mqtt.ttn
  *
  */
 
-object UplinkV3 {
+import com.google.gson.JsonElement
+import de.kp.works.transform.BaseTransform
+import org.apache.spark.sql.Row
+
+object ZeekTransform extends BaseTransform {
+
+  def fromValues(eventType: String, eventData: JsonElement): Option[Seq[Row]] = {
+    /*
+     * The tail (or last) element of the event type
+     * value specifies the format of the Zeek log
+     */
+    val format = eventType.split("\\/").last
+
+    ???
+  }
 
 }

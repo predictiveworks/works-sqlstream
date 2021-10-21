@@ -18,10 +18,8 @@ package de.kp.works.transform.fiware
  *
  */
 
-import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.module.scala.DefaultScalaModule
-import com.google.gson.{JsonElement, JsonParser}
-import de.kp.works.stream.sql.sse.transform.BaseTransform
+import com.google.gson.JsonElement
+import de.kp.works.transform.BaseTransform
 import org.apache.spark.sql.Row
 
 import scala.collection.JavaConversions._
@@ -32,17 +30,27 @@ import scala.collection.JavaConversions._
  * follows the [FiwareSchema]
  */
 object FiwareTransform extends BaseTransform {
-
-  private val mapper = new ObjectMapper()
-  mapper.registerModule(DefaultScalaModule)
-
   /**
    * This method supports the transformation of Fiware events
    * that are published by the Fiware Beat via the MQTT channel
    */
   def fromValues(event:String): Option[Seq[Row]] = {
-
-    val (eventType, eventData) = deserialize(event)
+    /*
+     * The SSE event comes with a unified format:
+     *
+     * {
+     *   type : ...,
+     *   event: {
+     *     service: ...,
+     *     servicePath: ...,
+     *     payload: {
+     *       data: [...],
+     *       subscriptionId: ...
+     *     }
+     *   }
+     * }
+     */
+    val (eventType, eventData) = deserializeSSE(event)
     fromValues(eventType, eventData)
 
   }
@@ -131,33 +139,6 @@ object FiwareTransform extends BaseTransform {
     } catch {
       case _: Throwable => None
     }
-  }
-
-  def deserialize(event:String): (String, JsonElement) = {
-    /*
-     * The SSE event comes with a unified format:
-     *
-     * {
-     *   type : ...,
-     *   event: {
-     *     service: ...,
-     *     servicePath: ...,
-     *     payload: {
-     *       data: [...],
-     *       subscriptionId: ...
-     *     }
-     *   }
-     * }
-     */
-    val json = JsonParser.parseString(event)
-      .getAsJsonObject
-
-    val eventType = json.get("type").getAsString
-    val eventData = JsonParser
-      .parseString(json.get("event").getAsString)
-
-    (eventType, eventData)
-
   }
 
 }

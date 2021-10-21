@@ -19,6 +19,7 @@ package de.kp.works.stream.sql.sse
  */
 
 import de.kp.works.transform.fiware.FiwareSchema
+import de.kp.works.transform.opcua.OpcUaSchema
 import org.apache.spark.sql.types._
 
 object SseSchema {
@@ -64,18 +65,26 @@ object SseSchema {
     beat match {
       case Beats.FIWARE =>
         /*
-         * Fiware events are defined by a single NGSI-compliant schema
-         * and do not need any further sub specification.
+         * Fiware events are defined by a single
+         * NGSI-compliant schema and do not need
+         * any further sub specification.
          */
         FiwareSchema.schema()
 
       case Beats.FLEET =>
         /*
-         * Fleet events distinguish between 200+ Osquery table formats
+         * Fleet events distinguish between 200+
+         * Osquery table formats
          */
         getPlainSchema
+
       case Beats.OPCUA =>
-        getPlainSchema
+        /*
+         * OPC-UA events are normalized by the
+         * OPC-UA Beat with a common schema
+         */
+        OpcUaSchema.schema()
+
       case Beats.OPENCTI =>
         getPlainSchema
       case Beats.OSQUERY =>

@@ -1,5 +1,4 @@
-package de.kp.works.stream.sql.sse.transform
-
+package de.kp.works.transform.things
 /*
  * Copyright (c) 2020 - 2021 Dr. Krusche & Partner PartG. All rights reserved.
  *
@@ -20,11 +19,12 @@ package de.kp.works.stream.sql.sse.transform
  */
 
 import com.google.gson.JsonElement
+import de.kp.works.transform.BaseTransform
 import org.apache.spark.sql.Row
 
-object OpcUaTransform extends BaseTransform {
+object ThingsTransform extends BaseTransform {
 
-  def fromValues(eventType:String, eventData:JsonElement):Option[Seq[Row]] = {
+  def fromValues(eventType: String, eventData: JsonElement): Option[Seq[Row]] = {
     ???
   }
 

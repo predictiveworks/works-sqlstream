@@ -1,4 +1,8 @@
-package de.kp.works.stream.sql.sse.transform
+package de.kp.works.transform.ttn
+
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.module.scala.DefaultScalaModule
+import com.google.gson.JsonObject
 
 /*
  * Copyright (c) 2020 - 2021 Dr. Krusche & Partner PartG. All rights reserved.
@@ -19,13 +23,20 @@ package de.kp.works.stream.sql.sse.transform
  *
  */
 
-import com.google.gson.JsonElement
-import org.apache.spark.sql.Row
+/**
+ * This TTN uplink transformer refers to the Things Stack v3
+ */
+object UplinkV3 extends Serializable {
 
-object TLSTransform extends BaseTransform {
+  private val mapper = new ObjectMapper()
+  mapper.registerModule(DefaultScalaModule)
 
-  def fromValues(eventType:String, eventData:JsonElement):Option[Seq[Row]] = {
-    ???
-  }
+  /**
+   * This method expects an MQTT message (payload)
+   * as a serialized JSON object and transforms
+   * the message into an enriched and normalized
+   * format.
+   */
+  def transform(message:String):JsonObject = ???
 
 }

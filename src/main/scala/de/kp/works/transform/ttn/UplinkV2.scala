@@ -1,4 +1,4 @@
-package de.kp.works.stream.sql.mqtt.ttn
+package de.kp.works.transform.ttn
 /*
  * Copyright (c) 2020 - 2021 Dr. Krusche & Partner PartG. All rights reserved.
  *
@@ -24,6 +24,7 @@ import com.google.gson.{JsonArray, JsonObject, JsonParser}
 
 import java.util
 import scala.collection.JavaConversions._
+
 /**
  * This TTN uplink transformer refers to the Things Stack v2
  */
