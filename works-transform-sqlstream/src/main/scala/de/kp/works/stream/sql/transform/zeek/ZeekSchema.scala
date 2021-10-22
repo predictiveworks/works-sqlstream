@@ -19,9 +19,81 @@ package de.kp.works.stream.sql.transform.zeek
  *
  */
 
+import de.kp.works.stream.sql.transform.Beats
+import de.kp.works.stream.sql.transform.zeek.ZeekFormats._
 import org.apache.spark.sql.types._
 
 object ZeekSchema {
+  /**
+   * This method determines the Zeek schema from the
+   * file name that is referenced in the configuration
+   */
+  def fromSchemaType(schemaType:String):StructType = {
+    /*
+     * Validate whether the provided schema type
+     * refers to the support format for Zeek log
+     * files:
+     *            zeek.<entity>.log
+     */
+    val tokens = schemaType.split("\\.")
+    if (tokens.size != 3)
+      throw new Exception("Unknown format for schema types detected.")
+
+    if (tokens(0) != Beats.ZEEK.toString)
+      throw new Exception("The schema type provided does not describe a Zeek schema.")
+
+    if (tokens(2) != "log")
+      throw new Exception("The schema type provided does not describe a Zeek log file.")
+    /*
+     * Extract log file name and determine schema
+     * that refers to log file name
+     */
+    val file = tokens(1) + ".log"
+
+    val format = ZeekFormatUtil.fromFile(file)
+    if (format == null) return null
+
+    format match {
+      case CAPTURE_LOSS => capture_loss()
+      case CONNECTION   => connection()
+      case DCE_RPC      => dce_rpc()
+      case DHCP         => dhcp()
+      case DNP3         => dnp3()
+      case DNS          => dns()
+      case DPD          => dpd()
+      case FILES        => files()
+      case FTP          => ftp()
+      case HTTP         => http()
+      case INTEL        => intel()
+      case IRC          => irc()
+      case KERBEROS     => kerberos()
+      case MODBUS       => modbus()
+      case MYSQL        => mysql()
+      case NOTICE       => notice()
+      case NTLM         => ntlm()
+      case OCSP         => ocsp()
+      case PE           => pe()
+      case RADIUS       => radius()
+      case RDP          => rdp()
+      case RFB          => rfb()
+      case SIP          => sip()
+      case SMB_CMD      => smb_cmd()
+      case SMB_FILES    => smb_files()
+      case SMB_MAPPING  => smb_mapping()
+      case SMTP         => smtp()
+      case SNMP         => snmp()
+      case SOCKS        => socks()
+      case SSH          => ssh()
+      case SSL          => ssl()
+      case STATS        => stats()
+      case SYSLOG       => syslog()
+      case TRACEROUTE   => traceroute()
+      case TUNNEL       => tunnel()
+      case WEIRD        => weird()
+      case X509         => x509()
+    }
+
+  }
 
   def capture_loss(): StructType = {
 

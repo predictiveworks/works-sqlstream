@@ -19,19 +19,111 @@ package de.kp.works.stream.sql.mqtt
  *
  */
 
+import de.kp.works.stream.sql.transform.Beats
+import de.kp.works.stream.sql.transform.fiware.FiwareSchema
+import de.kp.works.stream.sql.transform.opcua.OpcUaSchema
+import de.kp.works.stream.sql.transform.things.ThingsSchema
+import de.kp.works.stream.sql.transform.zeek.ZeekSchema
 import org.apache.spark.sql.types._
 
 object MqttSchema {
 
   def getSchema(schemaType:String):StructType = {
-    // TODO BEATS Integration
-    schemaType.toLowerCase match {
-      case "plain" => getPlainSchema
-      case _ =>
-        throw new Exception(s"Schema type `$schemaType` is not supported.")
+    /*
+     * The current implementation distinguishes between
+     * MQTT events that originate from one of the Works
+     * Beats and other sources
+     */
+    if (schemaType.startsWith("beats")) {
+      /*
+       * A Works Beat event in this scenario is limited
+       * to a certain event schema, i.e. a mix of multiple
+       * event formats cannot be supported here.
+       */
+      getBeatsSchema(schemaType)
+
+    }
+    else {
+      /*
+       * The provided SSE event contains data that are
+       * either different from those provided by one of
+       * the different Works Beats, or,
+       *
+       * combines events with multiple schemas
+       */
+      getPlainSchema
     }
 
   }
+  private def getBeatsSchema(schemaType:String):StructType = {
+
+    val tokens = schemaType.split("\\.")
+    val beat = try {
+      Beats.withName(tokens(1))
+
+    } catch {
+      case _:Throwable => null
+    }
+
+    if (beat == null) return getPlainSchema
+    beat match {
+      case Beats.FIWARE =>
+        /*
+         * Fiware events are defined by a single
+         * NGSI-compliant schema and do not need
+         * any further sub specification.
+         */
+        FiwareSchema.schema()
+
+      case Beats.FLEET =>
+        /*
+         * Fleet events distinguish between 200+
+         * Osquery table formats (TODO)
+         */
+        getPlainSchema
+
+      case Beats.OPCUA =>
+        /*
+         * OPC-UA events are normalized by the
+         * OPC-UA Beat with a common schema
+         */
+        OpcUaSchema.schema()
+
+      case Beats.OPENCTI =>
+        // TODO
+        getPlainSchema
+
+      case Beats.OSQUERY =>
+        // TODO
+        getPlainSchema
+
+      case Beats.THINGS =>
+        /*
+         * ThingsBoard gateway events describe changes
+         * of device attributes and have a common schema
+         * for all events.
+         */
+        ThingsSchema.schema()
+
+      case Beats.ZEEK =>
+        /*
+         * Zeek events distinguish between 35+ Zeek log
+         * formats; the schema type configuration is
+         * expected to have the following format:
+         *
+         * sample = zeek.conn.log
+         */
+        val schema = ZeekSchema.fromSchemaType(schemaType)
+        if (schema == null) getPlainSchema else schema
+
+      case _ =>
+        /* This should never happen */
+        throw new Exception(s"The provided Works Beat is not supported.")
+
+    }
+
+  }
+
   /**
    * This method builds the default (or plain) schema
    * for the incoming MQTT stream. It is independent

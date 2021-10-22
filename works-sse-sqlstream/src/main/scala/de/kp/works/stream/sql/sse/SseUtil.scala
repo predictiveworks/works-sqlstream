@@ -19,7 +19,7 @@ package de.kp.works.stream.sql.sse
  *
  */
 
-import de.kp.works.stream.sql.transform.TransformUtil
+import de.kp.works.stream.sql.transform.{Beats, TransformUtil}
 import de.kp.works.stream.sql.transform.fiware.FiwareTransform
 import de.kp.works.stream.sql.transform.fleet.FleetTransform
 import de.kp.works.stream.sql.transform.opcua.OpcUaTransform
@@ -90,7 +90,7 @@ object SseUtil {
        *
        */
       val (eventType, eventData) =
-        TransformUtil.deserializeSSE(event.sseData)
+        TransformUtil.deserializeSse(event.sseData)
       /*
        * Validate whether `eventType` and detected
        * beat are compliant. Sample:
@@ -99,7 +99,7 @@ object SseUtil {
        */
       val tokens = eventType.split("\\/")
       if (tokens(1) != beat.toString)
-        throw new Exception("SSE type and Works Beat specification are inconsistent.")
+        throw new Exception("Event type and Works Beat specification are inconsistent.")
       /*
        * Transform the received SSE event into a
        * Beat and schema-compliant representation.

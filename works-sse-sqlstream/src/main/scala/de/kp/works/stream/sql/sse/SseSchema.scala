@@ -19,9 +19,11 @@ package de.kp.works.stream.sql.sse
  *
  */
 
+import de.kp.works.stream.sql.transform.Beats
 import de.kp.works.stream.sql.transform.fiware.FiwareSchema
 import de.kp.works.stream.sql.transform.opcua.OpcUaSchema
 import de.kp.works.stream.sql.transform.things.ThingsSchema
+import de.kp.works.stream.sql.transform.zeek.ZeekSchema
 import org.apache.spark.sql.types._
 
 object SseSchema {
@@ -105,10 +107,14 @@ object SseSchema {
 
       case Beats.ZEEK =>
         /*
-         * Zeek events distinguish between 35+
-         * Zeek log formats (TODO)
+         * Zeek events distinguish between 35+ Zeek log
+         * formats; the schema type configuration is
+         * expected to have the following format:
+         *
+         * sample = zeek.conn.log
          */
-        getPlainSchema
+        val schema = ZeekSchema.fromSchemaType(schemaType)
+        if (schema == null) getPlainSchema else schema
 
       case _ =>
         /* This should never happen */

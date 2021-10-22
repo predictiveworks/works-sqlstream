@@ -191,16 +191,19 @@ class HiveSource(options: HiveOptions)
         val mqttEvent = new MqttEvent(topic, message)
 
         val rows = MqttUtil.toRows(mqttEvent, schemaType)
-        rows.foreach(row => {
 
-          val offset = currentOffset.offset + 1L
+        if (rows.isDefined) {
+          rows.get.foreach(row => {
 
-          events.put(offset, row)
-          store.store[Row](offset, row)
+            val offset = currentOffset.offset + 1L
 
-          currentOffset = LongOffset(offset)
+            events.put(offset, row)
+            store.store[Row](offset, row)
 
-        })
+            currentOffset = LongOffset(offset)
+
+          })
+        }
 
         log.trace(s"Message arrived, $topic $mqttEvent")
 

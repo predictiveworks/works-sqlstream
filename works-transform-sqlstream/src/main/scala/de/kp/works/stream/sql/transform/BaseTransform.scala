@@ -29,7 +29,28 @@ object TransformUtil extends Serializable {
   protected val mapper = new ObjectMapper()
   mapper.registerModule(DefaultScalaModule)
 
-  def deserializeSSE(event:String): (String, JsonElement) = {
+  def deserializeMqtt(event:String): (String, JsonElement) = {
+    /*
+     * The Mqtt event comes with a unified format:
+     *
+     * {
+     *   type : ...,
+     *   event: {
+     *   }
+     * }
+     */
+    val json = JsonParser.parseString(event)
+      .getAsJsonObject
+
+    val eventType = json.get("type").getAsString
+    val eventData = JsonParser
+      .parseString(json.get("event").getAsString)
+
+    (eventType, eventData)
+
+  }
+
+  def deserializeSse(event:String): (String, JsonElement) = {
     /*
      * The SSE event comes with a unified format:
      *
@@ -95,6 +116,6 @@ trait BaseTransform extends Serializable {
     TransformUtil.getBasicType(fieldValue)
 
   def deserializeSSE(event:String): (String, JsonElement) =
-    TransformUtil.deserializeSSE(event)
+    TransformUtil.deserializeSse(event)
 
 }

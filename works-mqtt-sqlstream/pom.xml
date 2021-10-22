@@ -35,6 +35,12 @@
             <version>0.4.3</version>
         </dependency>
 
+        <dependency>
+            <groupId>de.kp.works</groupId>
+            <artifactId>works-transform-sqlstream</artifactId>
+            <version>0.4.3</version>
+        </dependency>
+
         <!-- ECLIPSE DITTO
         -->
         <dependency>

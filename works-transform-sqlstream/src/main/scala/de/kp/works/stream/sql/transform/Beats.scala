@@ -1,5 +1,4 @@
-package de.kp.works.stream.sql.sse
-
+package de.kp.works.stream.sql.transform
 /*
  * Copyright (c) 2020 - 2021 Dr. Krusche & Partner PartG. All rights reserved.
  *
@@ -23,12 +22,12 @@ object Beats extends Enumeration {
 
   type Beat = Value
 
-  val FIWARE: Beats.Value   = Value(1, "fiware")
-  val FLEET: Beats.Value    = Value(2, "fleet")
-  val OPCUA: Beats.Value    = Value(3, "opcua")
-  val OPENCTI: Beats.Value  = Value(4, "opencti")
-  val OSQUERY: Beats.Value  = Value(5, "osquery")
-  val THINGS: Beats.Value   = Value(6, "things")
-  val ZEEK: Beats.Value     = Value(7, "zeek")
+  val FIWARE: Beats.Value  = Value(1, "fiware")
+  val FLEET: Beats.Value   = Value(2, "fleet")
+  val OPCUA: Beats.Value   = Value(3, "opcua")
+  val OPENCTI: Beats.Value = Value(4, "opencti")
+  val OSQUERY: Beats.Value = Value(5, "osquery")
+  val THINGS: Beats.Value  = Value(6, "things")
+  val ZEEK: Beats.Value    = Value(7, "zeek")
 
 }
