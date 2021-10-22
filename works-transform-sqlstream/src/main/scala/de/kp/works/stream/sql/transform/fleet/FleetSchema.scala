@@ -35,13 +35,13 @@ object FleetSchema {
   def fromSchemaType(schemaType:String):StructType = {
     /*
      * Validate whether the provided schema type
-     * refers to the support format for Zeek log
+     * refers to the support format for Fleet log
      * files:
      *            fleet.<table>
      */
     val tokens = schemaType.split("\\.")
     if (tokens.size != 2)
-      throw new Exception("Unknown format for schema types detected.")
+      throw new Exception("Unknown format for schema type detected.")
 
     if (tokens(0) != Beats.FLEET.toString)
       throw new Exception("The schema type provided does not describe a Fleet schema.")

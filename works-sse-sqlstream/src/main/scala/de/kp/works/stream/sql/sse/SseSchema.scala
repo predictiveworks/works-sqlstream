@@ -21,8 +21,11 @@ package de.kp.works.stream.sql.sse
 
 import de.kp.works.stream.sql.transform.Beats
 import de.kp.works.stream.sql.transform.fiware.FiwareSchema
+import de.kp.works.stream.sql.transform.fleet.FleetSchema
 import de.kp.works.stream.sql.transform.opcua.OpcUaSchema
+import de.kp.works.stream.sql.transform.opencti.CTISchema
 import de.kp.works.stream.sql.transform.things.ThingsSchema
+import de.kp.works.stream.sql.transform.tls.TLSSchema
 import de.kp.works.stream.sql.transform.zeek.ZeekSchema
 import org.apache.spark.sql.types._
 
@@ -78,9 +81,10 @@ object SseSchema {
       case Beats.FLEET =>
         /*
          * Fleet events distinguish between 200+
-         * Osquery table formats (TODO)
+         * Osquery table formats
          */
-        getPlainSchema
+        val schema = FleetSchema.fromSchemaType(schemaType)
+        if (schema == null) getPlainSchema else schema
 
       case Beats.OPCUA =>
         /*
@@ -90,12 +94,19 @@ object SseSchema {
         OpcUaSchema.schema()
 
       case Beats.OPENCTI =>
-        // TODO
-        getPlainSchema
+        /*
+         * OpenCTI STIXv2 events
+         */
+        val schema = CTISchema.fromSchemaType(schemaType)
+        if (schema == null) getPlainSchema else schema
 
       case Beats.OSQUERY =>
-        // TODO
-        getPlainSchema
+        /*
+         * Osquery agent events that were published to
+         * the respective Works Beat as TLS endpoint
+         */
+        val schema = TLSSchema.fromSchemaType(schemaType)
+        if (schema == null) getPlainSchema else schema
 
       case Beats.THINGS =>
         /*

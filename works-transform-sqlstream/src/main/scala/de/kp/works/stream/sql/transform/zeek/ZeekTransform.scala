@@ -1,5 +1,4 @@
 package de.kp.works.stream.sql.transform.zeek
-
 /*
  * Copyright (c) 2020 - 2021 Dr. Krusche & Partner PartG. All rights reserved.
  *
@@ -20,17 +19,27 @@ package de.kp.works.stream.sql.transform.zeek
  */
 
 import com.google.gson.JsonElement
-import de.kp.works.stream.sql.transform.BaseTransform
+import de.kp.works.stream.sql.transform.{BaseTransform, Beats}
 import org.apache.spark.sql.Row
 
 object ZeekTransform extends BaseTransform {
 
   def fromValues(eventType: String, eventData: JsonElement): Option[Seq[Row]] = {
     /*
-     * The tail (or last) element of the event type
-     * value specifies the format of the Zeek log
+     * Validate whether the provided event type
+     * refers to the support format for Zeek log
+     * files:
+     *            beat/zeek/<entity>.log
      */
-    val format = eventType.split("\\/").last
+    val tokens = eventType.split("\\/")
+    if (tokens.size != 3)
+      throw new Exception("Unknown format for event type detected.")
+
+    if (tokens(0) != Beats.ZEEK.toString)
+      throw new Exception("The event type provided does not describe a Zeek event.")
+
+    if (!tokens(2).endsWith(".log"))
+      throw new Exception("The event type provided does not describe a Zeek log file.")
 
     ???
   }
