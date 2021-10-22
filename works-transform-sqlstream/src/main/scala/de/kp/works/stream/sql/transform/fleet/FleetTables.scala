@@ -297,4 +297,20 @@ object FleetTables extends Enumeration {
   val YARA_EVENTS: FleetTables.Value = Value(270, "yara_events")
   val YCLOUD_INSTANCE_METADATA: FleetTables.Value = Value(271, "ycloud_instance_metadata")
   val YUM_SOURCES: FleetTables.Value = Value(272, "yum_sources")
+
+}
+
+
+object FleetTablesUtil {
+
+  def fromTable(table:String):FleetTables.Value = {
+
+    val formats = FleetTables.values.filter(format => {
+      table.contains(format.toString)
+    })
+
+    if (formats.isEmpty) return null
+    formats.head
+
+  }
 }

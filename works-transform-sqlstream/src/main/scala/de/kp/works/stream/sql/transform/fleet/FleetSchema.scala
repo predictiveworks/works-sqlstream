@@ -19,6 +19,7 @@ package de.kp.works.stream.sql.transform.fleet
  *
  */
 
+import de.kp.works.stream.sql.transform.Beats
 import org.apache.spark.sql.types._
 
 /**
@@ -26,6 +27,47 @@ import org.apache.spark.sql.types._
  * specifications for all Osquery tables of v4.6.0
  */
 object FleetSchema {
+  /**
+   * This method determines the Fleet schema from the
+   * table (query) name that is referenced in the
+   * configuration
+   */
+  def fromSchemaType(schemaType:String):StructType = {
+    /*
+     * Validate whether the provided schema type
+     * refers to the support format for Zeek log
+     * files:
+     *            fleet.<table>
+     */
+    val tokens = schemaType.split("\\.")
+    if (tokens.size != 2)
+      throw new Exception("Unknown format for schema types detected.")
+
+    if (tokens(0) != Beats.FLEET.toString)
+      throw new Exception("The schema type provided does not describe a Fleet schema.")
+    /*
+     * Extract log table name and determine schema
+     * that refers to log file name
+     */
+    val table = tokens(1)
+
+    val format = FleetTablesUtil.fromTable(table)
+    if (format == null) return null
+
+    try {
+
+      val methods = FleetSchema.getClass.getMethods
+
+      val method = methods.filter(m => m.getName == table).head
+      val schema = method.invoke(FleetSchema).asInstanceOf[StructType]
+
+      schema
+
+    } catch {
+      case _:Throwable => null
+    }
+
+  }
 
   def account_policy_data(): StructType = {
 
