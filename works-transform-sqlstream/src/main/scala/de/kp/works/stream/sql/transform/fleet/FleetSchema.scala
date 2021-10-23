@@ -50,25 +50,63 @@ object FleetSchema {
      * that refers to log file name
      */
     val table = tokens(1)
+    fromTable(table)
+
+  }
+
+  def fromTable(table:String):StructType = {
 
     val format = FleetTablesUtil.fromTable(table)
     if (format == null) return null
 
     try {
+      /*
+       * Distinguish between `query` tables and the `osquery_status` table.
+       * The latter is a proprietary extension, introduced to support status
+       * log events.
+       */
+      if (format == FleetTables.OSQUERY_STATUS)
+        FleetSchema.osquery_status()
 
-      val methods = FleetSchema.getClass.getMethods
+      else {
+        /*
+         * [FleetTransform] normalizes Fleet event, batch and snapshot
+         * log events and therefore, the column format is extended by
+         * additional metadata columns.
+         *
+         * In order to avoid naming conflicts with Osquery based column
+         * names, these metadata columns are prefixed by `x_works_`.
+         */
+        var fields = Array(
+          /* The `name` (of the query) */
+          StructField("x_works_name", StringType, nullable = false),
+          /* The timestamp of the event */
+          StructField("x_works_timestamp", LongType, nullable = false),
+          /* The hostname of the event */
+          StructField("x_works_hostname", StringType, nullable = false),
+          /* The action of the event */
+          StructField("x_works_action", StringType, nullable = false)
+        )
+        /*
+         * The remaining schema fields, that describe the columns
+         * associated with a result log event are retrieved via
+         * method invocation
+         */
+        val methods = FleetSchema.getClass.getMethods
 
-      val method = methods.filter(m => m.getName == table).head
-      val schema = method.invoke(FleetSchema).asInstanceOf[StructType]
+        val method = methods.filter(m => m.getName == table).head
+        val schema = method.invoke(FleetSchema).asInstanceOf[StructType]
 
-      schema
+        fields = fields ++ schema.fields
+        StructType(fields)
+
+      }
 
     } catch {
       case _:Throwable => null
     }
 
   }
-
   def account_policy_data(): StructType = {
 
     val fields = Array(
@@ -4890,6 +4928,24 @@ object FleetSchema {
       StructField("gpgcheck", StringType, nullable = true),
       StructField("gpgkey", StringType, nullable = true),
       StructField("name", StringType, nullable = true)
+    )
+
+    StructType(fields)
+
+  }
+  /*
+   * The list of Osquery tables (version 4.6.0) is extended
+   * by a proprietary `osquery_status` table to also take
+   * status log event into account.
+   *
+   * Status events are represented by single column table
+   * where the column contains the serialized message.
+   *
+   */
+  def osquery_status(): StructType = {
+
+    val fields = Array(
+      StructField("message", StringType, nullable = false)
     )
 
     StructType(fields)

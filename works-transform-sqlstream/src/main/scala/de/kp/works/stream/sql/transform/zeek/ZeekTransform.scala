@@ -40,6 +40,14 @@ object ZeekTransform extends BaseTransform {
 
     if (!tokens(2).endsWith(".log"))
       throw new Exception("The event type provided does not describe a Zeek log file.")
+    /*
+     * Extract log file name and determine schema
+     * that refers to log file name
+     */
+    val file = tokens(1) + ".log"
+
+    val format = ZeekFormatUtil.fromFile(file)
+    if (format == null) return null
 
     ???
   }

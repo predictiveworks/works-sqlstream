@@ -19,8 +19,11 @@ package de.kp.works.stream.sql.transform.fleet
  */
 
 import com.google.gson.JsonElement
+import de.kp.works.stream.sql.json.JsonUtil
 import de.kp.works.stream.sql.transform.{BaseTransform, Beats}
 import org.apache.spark.sql.Row
+
+import scala.collection.JavaConversions._
 
 object FleetTransform extends BaseTransform {
 
@@ -29,7 +32,8 @@ object FleetTransform extends BaseTransform {
      * Validate whether the provided event type
      * refers to the support format for Fleet log
      * files:
-     *            beat/fleet/<table>
+     *
+     *      beat/fleet/<table>>
      */
     val tokens = eventType.split("\\/")
     if (tokens.size != 3)
@@ -37,16 +41,45 @@ object FleetTransform extends BaseTransform {
 
     if (tokens(0) != Beats.FLEET.toString)
       throw new Exception("The event type provided does not describe a Fleet event.")
-    /*
-     * Extract log table name and determine the
-     * table format is supported
-     */
-    val table = tokens(2)
 
-    val format = FleetTablesUtil.fromTable(table)
-    if (format == null) return None
+    val table = FleetTablesUtil.fromTable(tokens(2))
+    if (table == null) return None
 
-    ???
+    if (table == FleetTables.OSQUERY_STATUS) {
+      /*
+       * For status events, the entire message is serialized
+       * and provided as column value
+       */
+      val values = Seq(eventData.toString)
+      val row = Row.fromSeq(values)
+
+      Some(Seq(row))
+
+    }
+    else {
+      /*
+       * Retrieve the Fleet schema, as it is required to
+       * convert each (batch) event object into a [Row]
+       */
+      val schema = FleetSchema.fromTable(table.toString)
+
+      val batch = eventData.getAsJsonArray
+      val rows = batch.map(batchElem => {
+        /*
+         * IMPORTANT: This implementation expects that the
+         * event data originate from the Fleet Beat, as this
+         * beat normalizes and transforms the Osquery result
+         * format.
+         */
+        val batchObj = batchElem.getAsJsonObject
+        JsonUtil.json2Row(batchObj, schema)
+
+      }).toSeq
+
+      Some(rows)
+
+    }
+
   }
 
 }
