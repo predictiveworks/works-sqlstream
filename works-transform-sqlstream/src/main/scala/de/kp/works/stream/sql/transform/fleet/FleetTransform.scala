@@ -62,6 +62,7 @@ object FleetTransform extends BaseTransform {
        * convert each (batch) event object into a [Row]
        */
       val schema = FleetSchema.fromTable(table.toString)
+      if (schema == null) return None
 
       val batch = eventData.getAsJsonArray
       val rows = batch.map(batchElem => {

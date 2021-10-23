@@ -18,12 +18,19 @@ package de.kp.works.stream.sql.transform.zeek
  *
  */
 
-import com.google.gson.JsonElement
+import com.google.gson.{JsonElement, JsonObject}
+import de.kp.works.stream.sql.json.JsonUtil
 import de.kp.works.stream.sql.transform.{BaseTransform, Beats}
 import org.apache.spark.sql.Row
 
 object ZeekTransform extends BaseTransform {
-
+  /*
+   * This method transforms a Zeek log event that refer to
+   * a certain log file into a single Apache Spark [Row].
+   *
+   * The method interface is harmonized with all other
+   * transform methods and exposes a Seq[Row]
+   */
   def fromValues(eventType: String, eventData: JsonElement): Option[Seq[Row]] = {
     /*
      * Validate whether the provided event type
@@ -46,10 +53,27 @@ object ZeekTransform extends BaseTransform {
      */
     val file = tokens(1) + ".log"
 
-    val format = ZeekFormatUtil.fromFile(file)
-    if (format == null) return null
+    val schema = ZeekSchema.fromFile(file)
+    if (schema == null) return None
 
-    ???
+    try {
+      /*
+       * Determine method to replace Zeek specific names
+       * to harmonize field names
+       */
+      val methods = ZeekReplace.getClass.getMethods
+      val method = methods.filter(m => m.getName == s"replace_${tokens(1)}").head
+
+      val oldObj = eventData.getAsJsonObject
+      val newObj = method.invoke(ZeekReplace, oldObj).asInstanceOf[JsonObject]
+
+      val row = JsonUtil.json2Row(newObj, schema)
+      Some(Seq(row))
+
+    } catch {
+      case _:Throwable => None
+    }
+
   }
 
 }

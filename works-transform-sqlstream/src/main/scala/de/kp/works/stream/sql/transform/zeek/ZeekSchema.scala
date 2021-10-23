@@ -48,15 +48,22 @@ object ZeekSchema {
      * that refers to log file name
      */
     val file = tokens(1) + ".log"
+    fromFile(file)
+
+  }
+
+  def fromFile(file:String):StructType = {
 
     val format = ZeekFormatUtil.fromFile(file)
     if (format == null) return null
+
+    val name = file.replace(".log", "")
 
     try {
 
       val methods = ZeekSchema.getClass.getMethods
 
-      val method = methods.filter(m => m.getName == tokens(1)).head
+      val method = methods.filter(m => m.getName == name).head
       val schema = method.invoke(ZeekSchema).asInstanceOf[StructType]
 
       schema
@@ -66,7 +73,6 @@ object ZeekSchema {
     }
 
   }
-
   def capture_loss(): StructType = {
 
     val fields = Array(
