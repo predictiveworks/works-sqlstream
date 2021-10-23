@@ -26,8 +26,8 @@ object Beats extends Enumeration {
   val FLEET: Beats.Value   = Value(2, "fleet")
   val OPCUA: Beats.Value   = Value(3, "opcua")
   val OPENCTI: Beats.Value = Value(4, "opencti")
-  val OSQUERY: Beats.Value = Value(5, "osquery")
-  val THINGS: Beats.Value  = Value(6, "things")
+  val THINGS: Beats.Value  = Value(5, "things")
+  val TLS: Beats.Value     = Value(6, "osquery")
   val ZEEK: Beats.Value    = Value(7, "zeek")
 
 }

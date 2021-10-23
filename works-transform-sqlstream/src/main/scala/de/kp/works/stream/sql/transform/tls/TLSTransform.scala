@@ -20,13 +20,68 @@ package de.kp.works.stream.sql.transform.tls
  */
 
 import com.google.gson.JsonElement
-import de.kp.works.stream.sql.transform.BaseTransform
+import de.kp.works.stream.sql.json.JsonUtil
+import de.kp.works.stream.sql.transform.{BaseTransform, Beats}
 import org.apache.spark.sql.Row
+
+import scala.collection.JavaConversions._
 
 object TLSTransform extends BaseTransform {
 
   def fromValues(eventType: String, eventData: JsonElement): Option[Seq[Row]] = {
-    ???
+    /*
+     * Validate whether the provided event type
+     * refers to the support format for TLS log
+     * files:
+     *
+     *      beat/osquery/<table>>
+     */
+    val tokens = eventType.split("\\/")
+    if (tokens.size != 3)
+      throw new Exception("Unknown format for event type detected.")
+
+    if (tokens(0) != Beats.TLS.toString)
+      throw new Exception("The event type provided does not describe a TLS event.")
+
+    val table = TLSTablesUtil.fromTable(tokens(2))
+    if (table == null) return None
+
+    if (table == TLSTables.OSQUERY_STATUS) {
+      /*
+       * For status events, the entire message is serialized
+       * and provided as column value
+       */
+      val values = Seq(eventData.toString)
+      val row = Row.fromSeq(values)
+
+      Some(Seq(row))
+
+    }
+    else {
+      /*
+       * Retrieve the TLS schema, as it is required to
+       * convert each (batch) event object into a [Row]
+       */
+      val schema = TLSSchema.fromTable(table.toString)
+      if (schema == null) return None
+
+      val batch = eventData.getAsJsonArray
+      val rows = batch.map(batchElem => {
+        /*
+         * IMPORTANT: This implementation expects that the
+         * event data originate from the TLS Beat, as this
+         * beat normalizes and transforms the Osquery result
+         * format.
+         */
+        val batchObj = batchElem.getAsJsonObject
+        JsonUtil.json2Row(batchObj, schema)
+
+      }).toSeq
+
+      Some(rows)
+
+    }
+
   }
 
 }
