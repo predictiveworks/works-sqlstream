@@ -20,13 +20,71 @@ package de.kp.works.stream.sql.transform.opencti
  */
 
 import com.google.gson.JsonElement
-import de.kp.works.stream.sql.transform.BaseTransform
+import de.kp.works.stream.sql.transform.{BaseTransform, Beats}
 import org.apache.spark.sql.Row
 
 object CTITransform extends BaseTransform {
 
   def fromValues(eventType: String, eventData: JsonElement): Option[Seq[Row]] = {
-    ???
+    /*
+      * Validate whether the provided event type
+      * refers to the support format for OpenCTI
+      * events:
+      *
+      *      beat/opencti/<operation>
+      */
+    val tokens = eventType.split("\\/")
+    if (tokens.size != 3)
+      throw new Exception("Unknown format for event type detected.")
+
+    if (tokens(0) != Beats.OPENCTI.toString)
+      throw new Exception("The event type provided does not describe an OpenCTI event.")
+
+    val operation = tokens(2)
+    operation match {
+      case "create" | "delete" | "update" =>
+
+        try {
+
+          val event = mapper.readValue(eventData.toString, classOf[Map[String, Any]])
+
+          val entityId = event("id").asInstanceOf[String]
+          val entityType = event("type").asInstanceOf[String]
+
+          val rows = event
+            .filter{case(k,_) => k != "id" && k != "type"}
+            .map{case(k, v) =>
+
+              val attrName = k
+              val attrObj = v.asInstanceOf[Map[String, Any]]
+              val metadata = attrObj.getOrElse("metadata", "NULL").asInstanceOf[String]
+
+              val attrType = attrObj.getOrElse("type", "NULL").asInstanceOf[String]
+              val attrValu = attrObj.get("value") match {
+                case Some(value) => mapper.writeValueAsString(value)
+                case _ => ""
+              }
+              val values = Seq(
+                entityId,
+                entityType,
+                attrName,
+                attrType,
+                attrValu,
+                metadata)
+
+              Row.fromSeq(values)
+            }
+            .toSeq
+
+          Some(rows)
+
+        } catch {
+          case _:Throwable => None
+        }
+      case _ =>
+        throw new Exception(s"Unknown operation detected.")
+    }
+
   }
 
 }

@@ -97,10 +97,9 @@ object SseSchema {
         /*
          * OpenCTI STIXv2 events
          */
-        val schema = CTISchema.fromSchemaType(schemaType)
-        if (schema == null) getPlainSchema else schema
+        CTISchema.schema()
 
-      case Beats.OSQUERY =>
+      case Beats.TLS =>
         /*
          * Osquery agent events that were published to
          * the respective Works Beat as TLS endpoint

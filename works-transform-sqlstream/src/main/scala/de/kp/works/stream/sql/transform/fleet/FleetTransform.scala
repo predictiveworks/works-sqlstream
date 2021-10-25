@@ -33,7 +33,7 @@ object FleetTransform extends BaseTransform {
      * refers to the support format for Fleet log
      * files:
      *
-     *      beat/fleet/<table>>
+     *      beat/fleet/<table>
      */
     val tokens = eventType.split("\\/")
     if (tokens.size != 3)

@@ -125,7 +125,7 @@ object MqttUtil {
         case Beats.OPENCTI =>
           CTITransform.fromValues(eventType, eventData)
 
-        case Beats.OSQUERY =>
+        case Beats.TLS =>
           TLSTransform.fromValues(eventType, eventData)
 
         case Beats.THINGS =>

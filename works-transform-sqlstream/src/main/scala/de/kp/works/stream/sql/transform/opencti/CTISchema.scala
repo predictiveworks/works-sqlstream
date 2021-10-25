@@ -1,6 +1,6 @@
 package de.kp.works.stream.sql.transform.opencti
 /*
- * Copyright (c) 2020 - 2021 Dr. Krusche & Partner PartG. All rights reserved.
+ * Copyright (c) 2019 - 2021 Dr. Krusche & Partner PartG. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not
  * use this file except in compliance with the License. You may obtain a copy of
@@ -18,9 +18,31 @@ package de.kp.works.stream.sql.transform.opencti
  *
  */
 
-import org.apache.spark.sql.types.StructType
+import de.kp.works.stream.sql.transform.Beats
+import org.apache.spark.sql.types._
 
 object CTISchema {
-  def fromSchemaType(schemaType:String):StructType = ???
 
+  def schema():StructType = {
+
+    val fields = Array(
+      StructField("entity_id",   StringType, nullable = false),
+      StructField("entity_type", StringType, nullable = false),
+      /*
+       * Each entity is specified with a list of attributes,
+       * and each attribute is described by name, type, value
+       * and metadata.
+       *
+       * For a common representation, all attribute values are
+       * represented by its STRING values
+       */
+      StructField("attr_name",  StringType, nullable = false),
+      StructField("attr_type",  StringType, nullable = false),
+      StructField("attr_value", StringType, nullable = false),
+      StructField("metadata",   StringType, nullable = false)
+    )
+
+    StructType(fields)
+
+  }
 }

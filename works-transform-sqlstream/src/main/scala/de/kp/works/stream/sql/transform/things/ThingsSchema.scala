@@ -41,8 +41,8 @@ object ThingsSchema {
   def schema():StructType = {
 
     val fields = Array(
-      StructField("device_id", StringType, nullable = false),
-      StructField("device_id", StringType, nullable = false),
+      StructField("device_id",   StringType, nullable = false),
+      StructField("device_type", StringType, nullable = false),
       /*
        * Each device is specified with a list of attributes,
        * and each attribute is described by name, type, value
