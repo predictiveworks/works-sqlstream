@@ -18,9 +18,13 @@ package de.kp.works.stream.sql.transform.opencti
  *
  */
 
-import de.kp.works.stream.sql.transform.Beats
 import org.apache.spark.sql.types._
-
+/**
+ * The OpenCTI schema used for Works SQL Stream support
+ * is compliant to an NGSI v2 format and was defined to
+ * describe different OpenCTI STIX v2 events with a common
+ * data representation.
+ */
 object CTISchema {
 
   def schema():StructType = {

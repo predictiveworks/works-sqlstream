@@ -22,7 +22,10 @@ package de.kp.works.stream.sql.transform.opencti
 import com.google.gson.JsonElement
 import de.kp.works.stream.sql.transform.{BaseTransform, Beats}
 import org.apache.spark.sql.Row
-
+/**
+ * [CTITransform] expects events in the OpenCTI Beat
+ * output format, which is equivalent to NGSI v2.
+ */
 object CTITransform extends BaseTransform {
 
   def fromValues(eventType: String, eventData: JsonElement): Option[Seq[Row]] = {
