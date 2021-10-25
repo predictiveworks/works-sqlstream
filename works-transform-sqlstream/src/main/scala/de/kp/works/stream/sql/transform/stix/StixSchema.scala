@@ -2,6 +2,9 @@ package de.kp.works.stream.sql.transform.stix
 
 import org.apache.spark.sql.types._
 
+/*
+ * STIX v2.1 2019-07-26
+ */
 object StixSchema {
 
   /** DATA TYPES */
@@ -326,5 +329,103 @@ object StixSchema {
     StructType(fields)
 
   }
-}
 
+  def files():StructType = {
+
+    val fields = Array(
+      /*
+       * The File object defines the following extensions. In addition to these,
+       * producers MAY create their own.
+       *
+       * ntfs-ext, raster-image-ext, pdf-ext, archive-ext, windows-pebinary-ext
+       *
+       * Dictionary keys MUST identify the extension type by name. The corresponding
+       * dictionary values MUST contain the contents of the extension instance.
+       */
+      StructField("extensions", MapType(StringType, StringType), nullable = true),
+      /*
+       * Specifies a dictionary of hashes for the file. (When used with the Archive
+       * File Extension, this refers to the hash of the entire archive file, not its
+       * contents.)
+       *
+       * Dictionary keys MUST come from the hash-algorithm-ov.
+       */
+      StructField("hashes", MapType(StringType, StringType), nullable = true),
+      /*
+       * Specifies the size of the file, in bytes. The value of this property
+       * MUST NOT be negative.
+       */
+      StructField("size", LongType, nullable = true),
+      /*
+       * Specifies the name of the file.
+       */
+      StructField("name", StringType, nullable = true),
+      /*
+       * Specifies the observed encoding for the name of the file. This value MUST
+       * be specified using the corresponding name from the 2013-12-20 revision of
+       * the IANA character set registry [Character Sets]. If the value from the
+       * Preferred MIME Name column for a character set is defined, this value MUST
+       * be used; if it is not defined, then the value from the Name column in the
+       * registry MUST be used instead.
+       *
+       * This property allows for the capture of the original text encoding for the
+       * file name, which may be forensically relevant; for example, a file on an NTFS
+       * volume whose name was created using the windows-1251 encoding, commonly used
+       * for languages based on Cyrillic script.
+       */
+      StructField("name_enc", StringType, nullable = true),
+      /*
+       * Specifies the hexadecimal constant (“magic number”) associated with a specific
+       * file format that corresponds to the file, if applicable.
+       */
+      StructField("magic_number_hex", StringType, nullable = true),
+      /*
+       * Specifies the MIME type name specified for the file, e.g., application/msword.
+       * Whenever feasible, this value SHOULD be one of the values defined in the Template
+       * column in the IANA media type registry [Media Types].
+       *
+       * Maintaining a comprehensive universal catalog of all extant file types is obviously
+       * not possible. When specifying a MIME Type not included in the IANA registry,
+       * implementers should use their best judgement so as to facilitate interoperability.
+       */
+      StructField("mime_type", StringType, nullable = true),
+      /*
+       * Specifies the date/time the file was created.
+       */
+      StructField("ctime", TimestampType, nullable = true),
+      /*
+       * Specifies the date/time the file was last written to/modified.
+       */
+      StructField("mtime", TimestampType, nullable = true),
+      /*
+       * Specifies the date/time the file was last accessed.
+       */
+      StructField("atime", TimestampType, nullable = true),
+      /*
+       * Specifies the parent directory of the file, as a reference to
+       * a Directory object. The object referenced in this property MUST
+       * be of type directory.
+       */
+      StructField("parent_directory_ref", StringType, nullable = true),
+      /*
+       * Specifies a list of references to other Cyber-observable Objects
+       * contained within the file, such as another file that is appended
+       * to the end of the file, or an IP address that is contained somewhere
+       * in the file.
+       *
+       * This is intended for use cases other than those targeted by the Archive
+       * extension.
+       */
+      StructField("contains_refs", ArrayType(StringType, containsNull = false), nullable = true),
+      /*
+       * Specifies the content of the file, represented as an Artifact object.
+       * The object referenced in this property MUST be of type artifact.
+       */
+      StructField("content_ref", StringType, nullable = true)
+
+    )
+
+    StructType(fields)
+
+  }
+}
