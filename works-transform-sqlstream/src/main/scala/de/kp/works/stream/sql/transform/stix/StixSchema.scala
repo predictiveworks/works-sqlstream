@@ -1092,4 +1092,226 @@ object StixSchema {
 
   }
 
+  /** STIX OBJECTS **/
+
+  def attack_pattern:StructType = {
+
+    val fields = Array(
+
+    )
+
+    StructType(fields)
+
+  }
+
+  def campaign:StructType = {
+
+    val fields = Array(
+
+    )
+
+    StructType(fields)
+
+  }
+
+  def course_of_action:StructType = {
+
+    val fields = Array(
+
+    )
+
+    StructType(fields)
+
+  }
+
+  def grouping:StructType = {
+
+    val fields = Array(
+
+    )
+
+    StructType(fields)
+
+  }
+
+  def indicator:StructType = {
+
+    val fields = Array(
+
+    )
+
+    StructType(fields)
+
+  }
+
+  def identity:StructType = {
+
+    val fields = Array(
+
+    )
+
+    StructType(fields)
+
+  }
+
+  def infrastructure:StructType = {
+
+    val fields = Array(
+
+    )
+
+    StructType(fields)
+
+  }
+
+  def intrusion_set:StructType = {
+
+    val fields = Array(
+
+    )
+
+    StructType(fields)
+
+  }
+
+  def location:StructType = {
+
+    val fields = Array(
+
+    )
+
+    StructType(fields)
+
+  }
+
+  def malware:StructType = {
+
+    val fields = Array(
+
+    )
+
+    StructType(fields)
+
+  }
+
+  def malware_analysis:StructType = {
+
+    val fields = Array(
+
+    )
+
+    StructType(fields)
+
+  }
+
+  def note:StructType = {
+
+    val fields = Array(
+
+    )
+
+    StructType(fields)
+
+  }
+
+  def observed_data:StructType = {
+
+    val fields = Array(
+
+    )
+
+    StructType(fields)
+
+  }
+
+  def opinion:StructType = {
+
+    val fields = Array(
+
+    )
+
+    StructType(fields)
+
+  }
+
+  def report:StructType = {
+
+    val fields = Array(
+
+    )
+
+    StructType(fields)
+
+  }
+
+  def threat_actor:StructType = {
+
+    val fields = Array(
+
+    )
+
+    StructType(fields)
+
+  }
+
+  def tool:StructType = {
+
+    val fields = Array(
+
+    )
+
+    StructType(fields)
+
+  }
+
+  def vulnerability:StructType = {
+
+    val fields = Array(
+
+    )
+
+    StructType(fields)
+
+  }
+
+  def relationship:StructType = {
+
+    val fields = Array(
+
+    )
+
+    StructType(fields)
+
+  }
+
+  def sighting:StructType = {
+
+    val fields = Array(
+
+    )
+
+    StructType(fields)
+
+  }
+
+  def marking_definition:StructType = {
+
+    val fields = Array(
+
+    )
+
+    StructType(fields)
+
+  }
+
+  def language_content:StructType = {
+
+    val fields = Array(
+
+    )
+
+    StructType(fields)
+
+  }
+
 }
