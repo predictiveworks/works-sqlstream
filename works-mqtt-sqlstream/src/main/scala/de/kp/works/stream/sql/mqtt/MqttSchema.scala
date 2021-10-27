@@ -25,6 +25,7 @@ import de.kp.works.stream.sql.transform.opcua.OpcUaSchema
 import de.kp.works.stream.sql.transform.opencti.CTISchema
 import de.kp.works.stream.sql.transform.things.ThingsSchema
 import de.kp.works.stream.sql.transform.tls.TLSSchema
+import de.kp.works.stream.sql.transform.ttn.{UplinkV2, UplinkV3}
 import de.kp.works.stream.sql.transform.zeek.ZeekSchema
 import org.apache.spark.sql.types._
 
@@ -44,6 +45,13 @@ object MqttSchema {
        */
       getBeatsSchema(schemaType)
 
+    }
+    else if (schemaType.startsWith("ttn")) {
+      /*
+       * The current implementation supports uplink messages
+       * of versions v2 and v3 from the Things Stack
+       */
+      getTTNSchema(schemaType)
     }
     else {
       /*
@@ -133,6 +141,17 @@ object MqttSchema {
 
   }
 
+  private def getTTNSchema(schemaType: String):StructType = {
+
+    val tokens = schemaType.split("\\.")
+    tokens(1).toLowerCase match {
+      case "uplinkv2" => UplinkV2.schema()
+      case "uplinkv3" => UplinkV3.schema()
+      case _ =>
+        getPlainSchema
+
+    }
+  }
   /**
    * This method builds the default (or plain) schema
    * for the incoming MQTT stream. It is independent

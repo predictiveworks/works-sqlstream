@@ -25,6 +25,7 @@ import de.kp.works.stream.sql.transform.opcua.OpcUaTransform
 import de.kp.works.stream.sql.transform.opencti.CTITransform
 import de.kp.works.stream.sql.transform.things.ThingsTransform
 import de.kp.works.stream.sql.transform.tls.TLSTransform
+import de.kp.works.stream.sql.transform.ttn.{UplinkV2, UplinkV3}
 import de.kp.works.stream.sql.transform.zeek.ZeekTransform
 import de.kp.works.stream.sql.transform.{Beats, TransformUtil}
 import org.apache.spark.sql.Row
@@ -47,6 +48,17 @@ object MqttUtil {
        * event formats cannot be supported here.
        */
       fromBeatsValues(event)
+    }
+    else if (schemaType.startsWith("ttn")) {
+      /*
+       * The current implementation supports uplink messages
+       * of versions v2 and v3 from the Things Stack.
+       *
+       * In contrast to Works Beats events, with TTN based
+       * messages there is options to determine the version
+       * of the uplink message from the MQTT event itself.
+       */
+      fromTTNValues(event, schemaType)
 
     } else
     /*
@@ -147,6 +159,27 @@ object MqttUtil {
       }
 
     }
+
+  }
+
+  private def fromTTNValues(event:MqttEvent, schemaType:String):Option[Seq[Row]] = {
+
+    val message = new String(event.payload, "UTF-8")
+
+    val tokens = schemaType.split("\\.")
+    val row = tokens(1).toLowerCase match {
+      case "uplinkv2" =>
+        UplinkV2.transform(message)
+
+      case "uplinkv3" =>
+        UplinkV3.transform(message)
+      case _ =>
+        throw new Exception(s"The provided uplink version is not supported.")
+
+    }
+
+    if (row.isEmpty) None
+    Some(Seq(row.get))
 
   }
 

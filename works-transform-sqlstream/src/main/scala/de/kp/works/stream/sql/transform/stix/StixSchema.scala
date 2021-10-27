@@ -1048,7 +1048,7 @@ object StixSchema {
        * Each key in the dictionary MUST be a case preserved version of the name of the environment
        * variable, and each corresponding value MUST be the environment variable value as a string.
        */
-      StructField("environment_variables", MapType[String,String], nullable = false),
+      StructField("environment_variables", MapType(StringType,StringType, valueContainsNull = false), nullable = false),
       /*
        * Specifies the list of network connections opened by the process, as a reference to one or
        * more Network Traffic objects.
@@ -1317,10 +1317,7 @@ object StixSchema {
 
   def common_schema:StructType = {
 
-    val fields = Array(
-
-    )
-
+    val fields = Array.empty[StructField]
     StructType(fields)
 
   }
@@ -1997,7 +1994,7 @@ object StixSchema {
        * IMPORTANT: This field is implemented as a Map[String,String], where the value of each key/value
        * pair represents the serialized representation of a cyber observable
        */
-      StructField("objects", MapType[StringType,StringType], nullable = true),
+      StructField("objects", MapType(StringType,StringType, valueContainsNull = false), nullable = true),
       /*
        * A list of SCOs and SROs representing the observation. The object_refs MUST contain at least
        * one SCO reference if defined. The object_refs MAY include multiple SCOs and their corresponding

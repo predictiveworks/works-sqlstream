@@ -21,18 +21,135 @@ package de.kp.works.stream.sql.transform.ttn
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.scala.DefaultScalaModule
-import com.google.gson.{JsonArray, JsonObject, JsonParser}
+import org.apache.spark.sql.Row
+import org.apache.spark.sql.types._
 
-import java.util
-import scala.collection.JavaConversions._
+import scala.collection.mutable
 
 /**
  * This TTN uplink transformer refers to the Things Stack v2
  */
-object UplinkV2 extends Serializable {
+object UplinkV2 extends Uplink {
 
   private val mapper = new ObjectMapper()
   mapper.registerModule(DefaultScalaModule)
+
+  val AttributeType:StructType = {
+
+    val fields = Array(
+      StructField("attr_name",  StringType, nullable = false),
+      StructField("attr_type",  StringType, nullable = false),
+      StructField("attr_value", StringType, nullable = false)
+    )
+
+    StructType(fields)
+
+  }
+
+  val GatewayType:StructType = {
+
+    val fields = Array(
+      /*
+       * EUI of the gateway
+       */
+      StructField("gtw_id", StringType, nullable = false),
+      /*
+       * Time when the gateway received the message;
+       * left out when gateway does not have synchronized
+       * time
+       */
+      StructField("time", StringType, nullable = true),
+      /*
+       * Timestamp when the gateway received the message
+       */
+      StructField("timestamp", LongType, nullable = false),
+      /*
+       * Channel where the gateway received the message
+       */
+      StructField("channel", IntegerType, nullable = false),
+      /*
+       * Signal strength of the received message
+       */
+      StructField("rssi", IntegerType, nullable = false),
+      /*
+       * Signal to noise ratio of the received message
+       */
+      StructField("snr", DoubleType, nullable = false),
+      /*
+       * RF chain where the gateway received the message
+       */
+      StructField("rf_chain", IntegerType, nullable = false),
+      /*
+      * Gateway latitude
+      */
+      StructField("gateway_latitude",  DoubleType, nullable = false),
+      /*
+       * Gateway longitude
+       */
+      StructField("gateway_longitude", DoubleType, nullable = false),
+      /*
+       * Gateway altitude
+       */
+      StructField("gateway_altitude", StringType, nullable = false)
+    )
+
+    StructType(fields)
+
+  }
+
+  val MetadataType:StructType = {
+
+    val fields = Array(
+      /*
+       * Airtime in nanoseconds
+       */
+      StructField("airtime", LongType, nullable = false),
+      /*
+       * Time when the server received the message
+       */
+      StructField("time", StringType, nullable = false),
+      /*
+       * Frequency at which the message was sent
+       */
+      StructField("frequency", DoubleType, nullable = false),
+      /*
+       * Modulation that was used - LORA or FSK
+       */
+      StructField("modulation", StringType, nullable = false),
+      /*
+       * Data rate that was used - if LORA modulation
+       */
+      StructField("data_rate", StringType, nullable = true),
+      /*
+       + Bit rate that was used - if FSK modulation
+       */
+      StructField("bit_rate", DoubleType, nullable = true),
+      /*
+       * Coding rate that was used
+       */
+      StructField("coding_rate", StringType, nullable = true),
+      /*
+      * Device latitude
+      */
+      StructField("device_latitude",  DoubleType, nullable = false),
+      /*
+       * Device longitude
+       */
+      StructField("device_longitude", DoubleType, nullable = false),
+      /*
+       * Device altitude
+       */
+      StructField("device_altitude", StringType, nullable = false),
+      /*
+       * Gateways
+       */
+      StructField("gateways", ArrayType(GatewayType, containsNull = false), nullable = true)
+
+    )
+
+    StructType(fields)
+
+  }
 
   /**
    * This method expects an MQTT message (payload)
@@ -40,41 +157,71 @@ object UplinkV2 extends Serializable {
    * the message into an enriched and normalized
    * format.
    */
-  def transform(message:String):JsonObject = {
+  def transform(message:String):Option[Row] = {
 
-    val json = JsonParser.parseString(message)
+    try {
 
-    if (!json.isJsonObject) {
-      val now = new util.Date()
-      throw new Exception(s"[UplinkTransformer] ${now.toString} - Uplink messages must be JSON objects.")
+      val values = mutable.ArrayBuffer.empty[Any]
+      val data = mapper.readValue(message, classOf[Map[String, Any]])
+      /*
+       * Device type
+       */
+      val app_id = data("app_id").asInstanceOf[String]
+      values += app_id
+      /*
+       * Device name
+       */
+      val dev_id = data("dev_id").asInstanceOf[String]
+      values += dev_id
+      /*
+       * In case of LoRaWAN: the DevEUI
+       */
+      val hardware_serial = data("hardware_serial").asInstanceOf[String]
+      values += hardware_serial
+      /*
+       * LoRaWAN frame counter
+       */
+      val counter = data.getOrElse("counter", -1).asInstanceOf[Int]
+      values += counter
+
+      val port = data.getOrElse("port", -1).asInstanceOf[Int]
+      values += port
+
+      val is_retry = data("is_retry").asInstanceOf[Boolean]
+      values += is_retry
+
+      val confirmed = data("confirmed").asInstanceOf[Boolean]
+      values += confirmed
+
+      val payload_raw = data("payload_raw").asInstanceOf[String]
+      values += payload_raw
+
+      /*
+       * Extract payload fields
+       */
+      val attributes = data.get("payload_fields") match {
+        case Some(v) => getAttributes(v)
+        case _ => null
+      }
+
+      values += attributes
+
+      /*
+       * Assign metadata
+       */
+      val metadata = data.get("metadata") match {
+        case Some(v) => getMetadata(v)
+        case _ => null
+      }
+
+      values += metadata
+
+      val row = Row.fromSeq(values)
+      Some(row)
+
+    } catch {
+      case t:Throwable => t.printStackTrace(); None
     }
-
-    val jMessage = json.getAsJsonObject
-    var newObject = new JsonObject()
-
-    /* deviceName */
-    newObject.addProperty("deviceName", jMessage.get("dev_id").getAsString)
-
-    /* deviceType */
-    newObject.addProperty("deviceType", jMessage.get("app_id").getAsString)
-
-    /* airtime, latitude, longitude, altitude */
-    if (jMessage.has("metadata")) {
-      val metadata = jMessage.get("metadata").getAsJsonObject
-      newObject = getMetadata(newObject, metadata.getAsJsonObject())
-    }
-    else
-      newObject = getMetadata(newObject, null)
-
-    /* payload fields */
-    if (jMessage.has("payload_fields")) {
-      val fields = jMessage.get("payload_fields").getAsJsonObject
-      newObject = getPayloadFields(newObject, fields)
-    }
-    else
-      newObject = getPayloadFields(newObject, null)
-
-    newObject
 
   }
   /**
@@ -108,138 +255,256 @@ object UplinkV2 extends Serializable {
    * "altitude": 2 // Altitude of the device
    * }
    */
-  private def getMetadata(newObject:JsonObject, metadata:JsonObject):JsonObject = {
+  private def getMetadata(metaVal:Any):Row = {
 
-    if (metadata == null) {
-      /*
-       * `airtime` of the message in nanoseconds (nanoseconds is taken
-       * from the official TTN documentation :
-       *
-       * https://www.thethingsnetwork.org/docs/applications/mqtt/api/
-       *
-       * However, we never saw a use case or TTN application, where
-       * this parameter is different from milli seconds
-       */
-      newObject.addProperty("airtime", System.currentTimeMillis)
+    val values = mutable.ArrayBuffer.empty[Any]
+    val metadata = metaVal.asInstanceOf[Map[String, _]]
 
-      /* `latitude` of the device */
-      newObject.addProperty("latitude", 0D)
+    val airtime = metadata
+      .getOrElse("airtime", System.currentTimeMillis).asInstanceOf[Long]
 
-      /* longitude of the device */
-      newObject.addProperty("longitude", 0D)
+    values += airtime
 
-      /* altitude of the device */
-      newObject.addProperty("altitude", 0D)
+    val time = metadata
+      .getOrElse("time", "").asInstanceOf[String]
 
-    } else {
+    values += time
 
-      /* airtime of the message in nanoseconds */
+    val frequency = metadata
+      .getOrElse("frequency", 0D).asInstanceOf[Double]
 
-      var airtime:Long = System.currentTimeMillis
-      if (metadata.has("airtime"))
-        airtime = metadata.get("airtime").getAsLong
+    values += frequency
 
-      newObject.addProperty("airtime", airtime)
+    val modulation = metadata
+      .getOrElse("modulation", "").asInstanceOf[String]
 
-      /* latitude of the device */
+    values += modulation
 
-      var latitude:Double = 0D
-      if (metadata.has("latitude"))
-        latitude = metadata.get("latitude").getAsDouble
+    val data_rate = metadata
+      .getOrElse("data_rate", "").asInstanceOf[String]
 
-      newObject.addProperty("latitude", latitude)
+    values += data_rate
 
-      /* longitude of the device */
-
-      var longitude:Double = 0D
-      if (metadata.has("longitude"))
-        longitude = metadata.get("longitude").getAsDouble
-
-      newObject.addProperty("longitude", longitude)
-
-      /* altitude of the device */
-
-      var altitude:Double = 0D
-      if (metadata.has("altitude"))
-        altitude = metadata.get("altitude").getAsDouble
-
-      newObject.addProperty("altitude", altitude)
-
+    val bit_rate = metadata.get("bit_rate") match {
+      case Some(v) => try {
+        v.asInstanceOf[Double]
+      } catch {
+        case _:Throwable =>
+          v.asInstanceOf[Int].toDouble
+      }
+      case _ => 0D
     }
 
-    newObject
+    values += bit_rate
+
+    val coding_rate = metadata
+      .getOrElse("coding_rate", "").asInstanceOf[String]
+
+    values += coding_rate
+
+    val latitude = metadata
+      .getOrElse("latitude", 0D).asInstanceOf[Double]
+
+    values += latitude
+
+    val longitude = metadata
+      .getOrElse("longitude", 0D).asInstanceOf[Double]
+
+    values += longitude
+
+    val altitude = metadata.get("altitude") match {
+      case Some(v) => try {
+        v.asInstanceOf[Double]
+      } catch {
+        case _:Throwable =>
+          v.asInstanceOf[Int].toDouble
+      }
+      case _ => 0D
+    }
+
+    values += altitude
+    /*
+     * Gateways
+     */
+    val gateways = metadata.get("gateways") match {
+      case Some(v) => getGateways(v)
+      case _ => Seq.empty[Row]
+    }
+
+    values += gateways
+
+    val row = Row.fromSeq(values)
+    row
+
+  }
+  /**
+  "gateways": [
+      {
+        "gtw_id": "ttn-herengracht-ams",
+        "timestamp": 12345,
+        "time": "1970-01-01T00:00:00Z",
+        "channel": 0,
+        "rssi": -25,
+        "snr": 5,
+        "rf_chain": 0,
+        "latitude": 52.1234,
+        "longitude": 6.1234,
+        "altitude": 6
+      },
+      //...more if received by more gateways...
+    ],
+   */
+
+  def getGateways(gateVal:Any):Seq[Row] = {
+
+    val gateways = gateVal.asInstanceOf[List[Map[String, _]]]
+    gateways.map(gateway => {
+
+      val values = mutable.ArrayBuffer.empty[Any]
+
+      val gtw_id = gateway
+        .getOrElse("gtw_id", "").asInstanceOf[String]
+
+      values += gtw_id
+
+      val time = gateway
+        .getOrElse("time", "").asInstanceOf[String]
+
+      values += time
+
+      val timestamp = gateway.get("timestamp") match {
+        case Some(v) => try {
+          v.asInstanceOf[Long]
+        } catch {
+          case _:Throwable => 1000 * v.asInstanceOf[Int].toLong
+        }
+        case _ => 0L
+      }
+
+      values += timestamp
+
+      val channel = gateway
+        .getOrElse("channel", -1).asInstanceOf[Int]
+
+      values += channel
+
+      val rssi = gateway
+        .getOrElse("rssi", -1).asInstanceOf[Int]
+
+      values += rssi
+
+      val snr = gateway.get("snr") match {
+        case Some(v) => try {
+          v.asInstanceOf[Double]
+        } catch {
+          case _:Throwable =>
+            v.asInstanceOf[Int].toDouble
+        }
+        case _ => 0D
+      }
+
+      values += snr
+
+      val rf_chain = gateway
+        .getOrElse("rf_chain", -1).asInstanceOf[Int]
+
+      values += rf_chain
+
+      val latitude = gateway
+        .getOrElse("latitude", 0D).asInstanceOf[Double]
+
+      values += latitude
+
+      val longitude = gateway
+        .getOrElse("longitude", 0D).asInstanceOf[Double]
+
+      values += longitude
+
+      val altitude = gateway.get("altitude") match {
+        case Some(v) => try {
+          v.asInstanceOf[Double]
+        } catch {
+          case _:Throwable =>
+            v.asInstanceOf[Int].toDouble
+        }
+        case _ => 0D
+      }
+
+      values += altitude
+
+      Row.fromSeq(values)
+
+    })
 
   }
   /**
    * Transform the payload fields of an uplink message
    */
-  private def getPayloadFields(newObject:JsonObject, fields:JsonObject):JsonObject = {
+  private def getAttributes(attrsVal:Any):Seq[Row] = {
 
-    val columns = new JsonArray
-    val fieldMap = mapper.readValue(fields.toString, classOf[Map[String, Any]])
+    val attributes = attrsVal.asInstanceOf[Map[String,_]]
+    attributes.map{case(k,v) =>
 
-    fields.entrySet().foreach(field => {
-
-      val fieldName = field.getKey
-      val fieldValue = field.getValue
-
-      val column = new JsonObject
-      column.addProperty("name", fieldName)
-      column.add("value", fieldValue)
-
-      /* In addition to the field specification, a column
-       * is also enriched with the data type
-       */
-      var dataType:String = "NULL"
-      fieldMap(fieldName) match {
-        case _: List[_] =>
-          dataType = "LIST"
-        case _: Map[_, _] =>
-          dataType = "MAP"
-        case _ =>
-          dataType = getBasicType(fieldMap(fieldName))
+      val attr_name = k
+      val attr_type = v match {
+        case _: List[_]   => "List"
+        case _: Map[_, _] => "Map"
+        case _ => getDataType(v)
       }
 
-      column.addProperty("type", dataType)
-      columns.add(column)
+      val attr_value = mapper.writeValueAsString(v)
 
-    })
+      val values = Seq(
+        attr_name,
+        attr_type,
+        attr_value
+      )
 
-    newObject.add("columns", columns)
-    newObject
+      Row.fromSeq(values)
 
-  }
-
-  private def getBasicType(fieldValue: Any): String = {
-    fieldValue match {
-      /*
-       * Basic data types: these data type descriptions
-       * are harmonized with [ValueType]
-       */
-      case _: BigDecimal => "DECIMAL"
-      case _: Boolean => "BOOLEAN"
-      case _: Byte => "BYTE"
-      case _: Double => "DOUBLE"
-      case _: Float => "FLOAT"
-      case _: Int => "INT"
-      case _: Long => "LONG"
-      case _: Short => "SHORT"
-      case _: String => "STRING"
-      /*
-       * Datetime support
-       */
-      case _: java.sql.Date => "DATE"
-      case _: java.sql.Timestamp => "TIMESTAMP"
-      case _: java.util.Date => "DATE"
-      case _: java.time.LocalDate => "DATE"
-      case _: java.time.LocalDateTime => "DATE"
-      case _: java.time.LocalTime => "TIMESTAMP"
-
-     case _ =>
-        val now = new java.util.Date().toString
-        throw new Exception(s"[ERROR] $now - Basic data type not supported.")
-    }
+    }.toSeq
 
   }
 
+  def schema():StructType = {
+
+    val fields = Array(
+      StructField("app_id",          StringType, nullable = false),
+      StructField("dev_id",          StringType, nullable = false),
+      StructField("hardware_serial", StringType, nullable = false),
+      /*
+       * LoRaWAN frame counter
+       */
+      StructField("counter", IntegerType, nullable = true),
+      /*
+       * LoRaWAN FPort
+       */
+      StructField("port", IntegerType, nullable = true),
+      /*
+       * Is set to true if this message is a retry
+       * (you could also detect this from the counter)
+       */
+      StructField("is_retry", BooleanType, nullable = false),
+      /*
+       * Is set to true if this message was a confirmed
+       * message
+       */
+      StructField("confirmed", BooleanType, nullable = false),
+      /*
+       * Base64 encoded payload: [0x01, 0x02, 0x03, 0x04]
+       */
+      StructField("payload_raw", StringType, nullable = false),
+      /*
+       * Decoded payload object, decoded by the device
+       * payload formatter
+       */
+      StructField("attributes", ArrayType(AttributeType, containsNull = true), nullable = true),
+      /*
+       * The metadata object
+       */
+      StructField("metadata", MetadataType, nullable = true)
+    )
+
+    StructType(fields)
+  }
 }
