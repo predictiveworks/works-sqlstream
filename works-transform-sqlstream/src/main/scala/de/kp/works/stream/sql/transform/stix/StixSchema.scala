@@ -278,8 +278,6 @@ object StixSchema {
 
   }
 
-  /******/
-
  /*
   * The created_by_ref property specifies the id property of the identity object
   * that describes the entity that created this object. If this attribute is omitted,
@@ -400,10 +398,6 @@ object StixSchema {
   val defanged: StructField =
     StructField("defanged", BooleanType, nullable = true)
 
-//
-//  extensions
-//
-////  labels, granular_markings
   /**
    * CYBER OBSERVABLES
    *
@@ -431,7 +425,7 @@ object StixSchema {
 
   def artifact():StructType = {
 
-    val fields = Array(
+    var fields = Array(
       /*
        * Whenever feasible, this value SHOULD be one of the values defined
        * in the Template column in the IANA media type registry [Media Types].
@@ -483,13 +477,23 @@ object StixSchema {
       StructField("decryption_key", StringType, nullable = true)
     )
 
+    /* Append common columns */
+
+    fields = fields ++ Array(
+      spec_version_sco,
+      defanged,
+      extensions,
+      granular_markings,
+      object_marking_refs
+    )
+
     StructType(fields)
 
   }
 
   def autonomous_system():StructType = {
 
-    val fields = Array(
+    var fields = Array(
       /*
        * Specifies the number assigned to the AS. Such assignments are typically
        * performed by a Regional Internet Registry (RIR).
@@ -506,13 +510,23 @@ object StixSchema {
       StructField("rir", StringType, nullable = true)
     )
 
+    /* Append common columns */
+
+    fields = fields ++ Array(
+      spec_version_sco,
+      defanged,
+      extensions,
+      granular_markings,
+      object_marking_refs
+    )
+
     StructType(fields)
 
   }
 
   def directory():StructType = {
 
-    val fields = Array(
+    var fields = Array(
       /*
        * Specifies the path, as originally observed, to the directory on the file system.
        */
@@ -547,12 +561,22 @@ object StixSchema {
       StructField("contains_refs", ArrayType(StringType, containsNull = false), nullable = true)
     )
 
+    /* Append common columns */
+
+    fields = fields ++ Array(
+      spec_version_sco,
+      defanged,
+      extensions,
+      granular_markings,
+      object_marking_refs
+    )
+
     StructType(fields)
 
   }
    def domain_name():StructType = {
 
-     val fields = Array(
+     var fields = Array(
        /*
         * Specifies the value of the domain name. The value of this property MUST
         * conform to [RFC1034], and each domain and sub-domain contained within the
@@ -569,13 +593,23 @@ object StixSchema {
        StructField("resolves_to_refs", ArrayType(StringType, containsNull = false), nullable = true)
      )
 
+     /* Append common columns */
+
+     fields = fields ++ Array(
+       spec_version_sco,
+       defanged,
+       extensions,
+       granular_markings,
+       object_marking_refs
+     )
+
      StructType(fields)
 
    }
 
   def email_address():StructType = {
 
-    val fields = Array(
+    var fields = Array(
       /*
        * Specifies the value of the email address. This MUST NOT include the display name.
        * This property corresponds to the addr-spec construction in section 3.4 of [RFC5322],
@@ -595,13 +629,23 @@ object StixSchema {
       StructField("belongs_to_ref", StringType, nullable = true)
     )
 
+    /* Append common columns */
+
+    fields = fields ++ Array(
+      spec_version_sco,
+      defanged,
+      extensions,
+      granular_markings,
+      object_marking_refs
+    )
+
     StructType(fields)
 
   }
 
   def email_message():StructType = {
 
-    val fields = Array(
+    var fields = Array(
       /*
        * Indicates whether the email body contains multiple MIME parts.
        */
@@ -696,13 +740,23 @@ object StixSchema {
       StructField("raw_email_ref", StringType, nullable = true)
     )
 
+    /* Append common columns */
+
+    fields = fields ++ Array(
+      spec_version_sco,
+      defanged,
+      extensions,
+      granular_markings,
+      object_marking_refs
+    )
+
     StructType(fields)
 
   }
 
   def files():StructType = {
 
-    val fields = Array(
+    var fields = Array(
       /*
        * The File object defines the following extensions. In addition to these,
        * producers MAY create their own.
@@ -794,13 +848,22 @@ object StixSchema {
       StructField("content_ref", StringType, nullable = true)
     )
 
+    /* Append common columns */
+
+    fields = fields ++ Array(
+      spec_version_sco,
+      defanged,
+      granular_markings,
+      object_marking_refs
+    )
+
     StructType(fields)
 
   }
 
   def ipv4_addr():StructType = {
 
-    val fields = Array(
+    var fields = Array(
       /*
        * Specifies one or more IPv4 addresses expressed using CIDR notation.
        * If a given IPv4 Address Object represents a single IPv4 address, the
@@ -825,13 +888,23 @@ object StixSchema {
       StructField("belongs_to_refs", ArrayType(StringType, containsNull = false), nullable = true)
     )
 
+    /* Append common columns */
+
+    fields = fields ++ Array(
+      spec_version_sco,
+      defanged,
+      extensions,
+      granular_markings,
+      object_marking_refs
+    )
+
     StructType(fields)
 
   }
 
   def ipv6_addr():StructType = {
 
-    val fields = Array(
+    var fields = Array(
       /*
        * Specifies the values of one or more IPv6 addresses expressed using CIDR notation.
        * If a given IPv6 Address object represents a single IPv6 address, the CIDR /128
@@ -854,13 +927,23 @@ object StixSchema {
       StructField("belongs_to_refs", ArrayType(StringType, containsNull = false), nullable = true)
     )
 
+    /* Append common columns */
+
+    fields = fields ++ Array(
+      spec_version_sco,
+      defanged,
+      extensions,
+      granular_markings,
+      object_marking_refs
+    )
+
     StructType(fields)
 
   }
 
   def mac_addr():StructType = {
 
-    val fields = Array(
+    var fields = Array(
       /*
        * Specifies the value of a single MAC address. The MAC address value MUST be
        * represented as a single colon-delimited, lowercase MAC-48 address, which MUST
@@ -871,17 +954,37 @@ object StixSchema {
       StructField("value", StringType, nullable = false)
     )
 
+    /* Append common columns */
+
+    fields = fields ++ Array(
+      spec_version_sco,
+      defanged,
+      extensions,
+      granular_markings,
+      object_marking_refs
+    )
+
     StructType(fields)
 
   }
 
   def mutex():StructType = {
 
-    val fields = Array(
+    var fields = Array(
       /*
        * Specifies the name of the mutex object.
        */
       StructField("name", StringType, nullable = false)
+    )
+
+    /* Append common columns */
+
+    fields = fields ++ Array(
+      spec_version_sco,
+      defanged,
+      extensions,
+      granular_markings,
+      object_marking_refs
     )
 
     StructType(fields)
@@ -890,7 +993,7 @@ object StixSchema {
 
   def network_traffic():StructType = {
 
-    val fields = Array(
+    var fields = Array(
       /*
        * The Network Traffic object defines the following extensions. In addition to these,
        * producers MAY create their own.
@@ -1004,13 +1107,22 @@ object StixSchema {
       StructField("encapsulated_by_ref", StringType, nullable = true)
     )
 
+    /* Append common columns */
+
+    fields = fields ++ Array(
+      spec_version_sco,
+      defanged,
+      granular_markings,
+      object_marking_refs
+    )
+
     StructType(fields)
 
   }
 
   def process():StructType = {
 
-    val fields = Array(
+    var fields = Array(
       /*
        * The Process object defines the following extensions. In addition to these, producers
        * MAY create their own.
@@ -1081,13 +1193,22 @@ object StixSchema {
       StructField("child_refs", ArrayType(StringType, containsNull = false), nullable = true)
     )
 
+    /* Append common columns */
+
+    fields = fields ++ Array(
+      spec_version_sco,
+      defanged,
+      granular_markings,
+      object_marking_refs
+    )
+
     StructType(fields)
 
   }
 
   def software():StructType = {
 
-    val fields = Array(
+    var fields = Array(
       /*
        * Specifies the name of the software.
        */
@@ -1114,13 +1235,23 @@ object StixSchema {
       StructField("version", StringType, nullable = true)
     )
 
+    /* Append common columns */
+
+    fields = fields ++ Array(
+      spec_version_sco,
+      defanged,
+      extensions,
+      granular_markings,
+      object_marking_refs
+    )
+
     StructType(fields)
 
   }
 
   def url():StructType = {
 
-    val fields = Array(
+    var fields = Array(
       /*
        * Specifies the value of the URL. The value of this property MUST conform to [RFC3986],
        * more specifically section 1.1.3 with reference to the definition for "Uniform Resource
@@ -1129,13 +1260,23 @@ object StixSchema {
       StructField("value", StringType, nullable = false)
     )
 
+    /* Append common columns */
+
+    fields = fields ++ Array(
+      spec_version_sco,
+      defanged,
+      extensions,
+      granular_markings,
+      object_marking_refs
+    )
+
     StructType(fields)
 
   }
 
   def user_account():StructType = {
 
-    val fields = Array(
+    var fields = Array(
       /*
        * The User Account object defines the following extensions. In addition to these, producers
        * MAY create their own.
@@ -1212,13 +1353,22 @@ object StixSchema {
       StructField("account_last_login", TimestampType, nullable = true)
     )
 
+    /* Append common columns */
+
+    fields = fields ++ Array(
+      spec_version_sco,
+      defanged,
+      granular_markings,
+      object_marking_refs
+    )
+
     StructType(fields)
 
   }
 
   def windows_registry_key():StructType = {
 
-    val fields = Array(
+    var fields = Array(
       /*
        * Specifies the full registry key including the hive. The value of the key, including
        * the hive portion, SHOULD be case-preserved. The hive portion of the key MUST be fully
@@ -1244,13 +1394,23 @@ object StixSchema {
       StructField("number_of_subkeys", IntegerType, nullable = true)
     )
 
+    /* Append common columns */
+
+    fields = fields ++ Array(
+      spec_version_sco,
+      defanged,
+      extensions,
+      granular_markings,
+      object_marking_refs
+    )
+
     StructType(fields)
 
   }
 
   def x509_certificate():StructType = {
 
-    val fields = Array(
+    var fields = Array(
       /*
        * Specifies whether the certificate is self-signed, i.e., whether it is signed by the same entity
        * whose identity it certifies.
@@ -1309,6 +1469,16 @@ object StixSchema {
       StructField("x509_v3_extensions", X509V3ExtensionsType, nullable = true)
     )
 
+    /* Append common columns */
+
+    fields = fields ++ Array(
+      spec_version_sco,
+      defanged,
+      extensions,
+      granular_markings,
+      object_marking_refs
+    )
+
     StructType(fields)
 
   }
@@ -1324,7 +1494,7 @@ object StixSchema {
 
   def attack_pattern:StructType = {
 
-    val fields = Array(
+    var fields = Array(
       /*
        * A list of external references which refer to non-STIX information. This property MAY
        * be used to provide one or more Attack Pattern identifiers, such as a CAPEC ID.
@@ -1352,13 +1522,29 @@ object StixSchema {
       StructField("kill_chain_phases", ArrayType(KillChainPhaseType, containsNull = false), nullable = true)
     )
 
+    /* Append common columns */
+
+    fields = fields ++ Array(
+      created,
+      modified,
+      spec_version_sdo,
+      confidence,
+      created_by_ref,
+      external_references,
+      granular_markings,
+      labels,
+      lang,
+      object_marking_refs,
+      revoked
+    )
+
     StructType(fields)
 
   }
 
   def campaign:StructType = {
 
-    val fields = Array(
+    var fields = Array(
       /*
        * A name used to identify the Campaign.
        */
@@ -1395,13 +1581,29 @@ object StixSchema {
       StructField("objective", StringType, nullable = true)
     )
 
+    /* Append common columns */
+
+    fields = fields ++ Array(
+      created,
+      modified,
+      spec_version_sdo,
+      confidence,
+      created_by_ref,
+      external_references,
+      granular_markings,
+      labels,
+      lang,
+      object_marking_refs,
+      revoked
+    )
+
     StructType(fields)
 
   }
 
   def course_of_action:StructType = {
 
-    val fields = Array(
+    var fields = Array(
       /*
        * A name used to identify the Course of Action.
        */
@@ -1456,13 +1658,29 @@ object StixSchema {
       StructField("action_reference", ExternalReferenceType, nullable = true)
     )
 
+    /* Append common columns */
+
+    fields = fields ++ Array(
+      created,
+      modified,
+      spec_version_sdo,
+      confidence,
+      created_by_ref,
+      external_references,
+      granular_markings,
+      labels,
+      lang,
+      object_marking_refs,
+      revoked
+    )
+
     StructType(fields)
 
   }
 
   def grouping:StructType = {
 
-    val fields = Array(
+    var fields = Array(
       /*
        * A name used to identify the Grouping.
        */
@@ -1483,13 +1701,29 @@ object StixSchema {
       StructField("object_refs", ArrayType(StringType, containsNull = false), nullable = true)
     )
 
+    /* Append common columns */
+
+    fields = fields ++ Array(
+      created,
+      modified,
+      spec_version_sdo,
+      confidence,
+      created_by_ref,
+      external_references,
+      granular_markings,
+      labels,
+      lang,
+      object_marking_refs,
+      revoked
+    )
+
     StructType(fields)
 
   }
 
   def identity:StructType = {
 
-    val fields = Array(
+    var fields = Array(
       /*
        * The name of this Identity. When referring to a specific entity (e.g., an individual or organization),
        * this property SHOULD contain the canonical name of the specific entity.
@@ -1522,13 +1756,29 @@ object StixSchema {
       StructField("contact_information", StringType, nullable = true)
     )
 
+    /* Append common columns */
+
+    fields = fields ++ Array(
+      created,
+      modified,
+      spec_version_sdo,
+      confidence,
+      created_by_ref,
+      external_references,
+      granular_markings,
+      labels,
+      lang,
+      object_marking_refs,
+      revoked
+    )
+
     StructType(fields)
 
   }
 
   def indicator:StructType = {
 
-    val fields = Array(
+    var fields = Array(
       /*
        * A name used to identify the Indicator. Producers SHOULD provide this property to help products
        * and analysts understand what this Indicator actually does.
@@ -1577,13 +1827,29 @@ object StixSchema {
       StructField("kill_chain_phases", ArrayType(KillChainPhaseType, containsNull = false), nullable = true)
     )
 
+    /* Append common columns */
+
+    fields = fields ++ Array(
+      created,
+      modified,
+      spec_version_sdo,
+      confidence,
+      created_by_ref,
+      external_references,
+      granular_markings,
+      labels,
+      lang,
+      object_marking_refs,
+      revoked
+    )
+
     StructType(fields)
 
   }
 
   def infrastructure:StructType = {
 
-    val fields = Array(
+    var fields = Array(
       /*
        * A name or characterizing text used to identify the Infrastructure.
        */
@@ -1619,13 +1885,29 @@ object StixSchema {
       StructField("last_seen", TimestampType, nullable = true)
     )
 
+    /* Append common columns */
+
+    fields = fields ++ Array(
+      created,
+      modified,
+      spec_version_sdo,
+      confidence,
+      created_by_ref,
+      external_references,
+      granular_markings,
+      labels,
+      lang,
+      object_marking_refs,
+      revoked
+    )
+
     StructType(fields)
 
   }
 
   def intrusion_set:StructType = {
 
-    val fields = Array(
+    var fields = Array(
       /*
        * A name used to identify this Intrusion Set.
        */
@@ -1686,13 +1968,29 @@ object StixSchema {
       StructField("secondary_motivations", ArrayType(StringType, containsNull = false), nullable = true)
     )
 
+    /* Append common columns */
+
+    fields = fields ++ Array(
+      created,
+      modified,
+      spec_version_sdo,
+      confidence,
+      created_by_ref,
+      external_references,
+      granular_markings,
+      labels,
+      lang,
+      object_marking_refs,
+      revoked
+    )
+
     StructType(fields)
 
   }
 
   def location:StructType = {
 
-    val fields = Array(
+    var fields = Array(
       /*
        * A name used to identify the Location.
        */
@@ -1754,13 +2052,29 @@ object StixSchema {
       StructField("postal_code", StringType, nullable = true)
     )
 
+    /* Append common columns */
+
+    fields = fields ++ Array(
+      created,
+      modified,
+      spec_version_sdo,
+      confidence,
+      created_by_ref,
+      external_references,
+      granular_markings,
+      labels,
+      lang,
+      object_marking_refs,
+      revoked
+    )
+
     StructType(fields)
 
   }
 
   def malware:StructType = {
 
-    val fields = Array(
+    var fields = Array(
       /*
        * A name used to identify the malware instance or family, as specified by the producer of the SDO.
        * For a malware family the name MUST be defined. If a name for a malware instance is not available,
@@ -1834,13 +2148,29 @@ object StixSchema {
       StructField("sample_refs", ArrayType(StringType, containsNull = false), nullable = true)
     )
 
+    /* Append common columns */
+
+    fields = fields ++ Array(
+      created,
+      modified,
+      spec_version_sdo,
+      confidence,
+      created_by_ref,
+      external_references,
+      granular_markings,
+      labels,
+      lang,
+      object_marking_refs,
+      revoked
+    )
+
     StructType(fields)
 
   }
 
   def malware_analysis:StructType = {
 
-    val fields = Array(
+    var fields = Array(
       /*
        * The name of the analysis engine or product that was used. Product names SHOULD be all
        * lowercase with words separated by a dash "-". For cases where the name of a product
@@ -1923,13 +2253,29 @@ object StixSchema {
       StructField("analysis_sco_refs", ArrayType(StringType, containsNull = false), nullable = true)
     )
 
+    /* Append common columns */
+
+    fields = fields ++ Array(
+      created,
+      modified,
+      spec_version_sdo,
+      confidence,
+      created_by_ref,
+      external_references,
+      granular_markings,
+      labels,
+      lang,
+      object_marking_refs,
+      revoked
+    )
+
     StructType(fields)
 
   }
 
   def note:StructType = {
 
-    val fields = Array(
+    var fields = Array(
       /*
        * A brief summary of the note content.
        */
@@ -1950,13 +2296,29 @@ object StixSchema {
 
     )
 
+    /* Append common columns */
+
+    fields = fields ++ Array(
+      created,
+      modified,
+      spec_version_sdo,
+      confidence,
+      created_by_ref,
+      external_references,
+      granular_markings,
+      labels,
+      lang,
+      object_marking_refs,
+      revoked
+    )
+
     StructType(fields)
 
   }
 
   def observed_data:StructType = {
 
-    val fields = Array(
+    var fields = Array(
       /*
        * The beginning of the time window during which the data was seen.
        */
@@ -2007,13 +2369,29 @@ object StixSchema {
       StructField("object_refs", ArrayType(StringType, containsNull = false), nullable = true)
     )
 
+    /* Append common columns */
+
+    fields = fields ++ Array(
+      created,
+      modified,
+      spec_version_sdo,
+      confidence,
+      created_by_ref,
+      external_references,
+      granular_markings,
+      labels,
+      lang,
+      object_marking_refs,
+      revoked
+    )
+
     StructType(fields)
 
   }
 
   def opinion:StructType = {
 
-    val fields = Array(
+    var fields = Array(
       /*
        * An explanation of why the producer has this Opinion. For example, if an Opinion of strongly-disagree is
        * given, the explanation can contain an explanation of why the Opinion producer disagrees and what evidence
@@ -2035,13 +2413,29 @@ object StixSchema {
       StructField("object_refs", ArrayType(StringType, containsNull = false), nullable = false)
     )
 
+    /* Append common columns */
+
+    fields = fields ++ Array(
+      created,
+      modified,
+      spec_version_sdo,
+      confidence,
+      created_by_ref,
+      external_references,
+      granular_markings,
+      labels,
+      lang,
+      object_marking_refs,
+      revoked
+    )
+
     StructType(fields)
 
   }
 
   def report:StructType = {
 
-    val fields = Array(
+    var fields = Array(
       /*
        * A name used to identify the Report.
        */
@@ -2068,13 +2462,29 @@ object StixSchema {
       StructField("object_refs", ArrayType(StringType, containsNull = false), nullable = false)
     )
 
+    /* Append common columns */
+
+    fields = fields ++ Array(
+      created,
+      modified,
+      spec_version_sdo,
+      confidence,
+      created_by_ref,
+      external_references,
+      granular_markings,
+      labels,
+      lang,
+      object_marking_refs,
+      revoked
+    )
+
     StructType(fields)
 
   }
 
   def threat_actor:StructType = {
 
-    val fields = Array(
+    var fields = Array(
       /*
        * A name used to identify this Threat Actor or Threat Actor group.
        */
@@ -2163,13 +2573,29 @@ object StixSchema {
       StructField("personal_motivations", ArrayType(StringType, containsNull = false), nullable = true)
     )
 
+    /* Append common columns */
+
+    fields = fields ++ Array(
+      created,
+      modified,
+      spec_version_sdo,
+      confidence,
+      created_by_ref,
+      external_references,
+      granular_markings,
+      labels,
+      lang,
+      object_marking_refs,
+      revoked
+    )
+
     StructType(fields)
 
   }
 
   def tool:StructType = {
 
-    val fields = Array(
+    var fields = Array(
       /*
        * The name used to identify the Tool.
        */
@@ -2198,13 +2624,29 @@ object StixSchema {
       StructField("tool_version", StringType, nullable = true)
     )
 
+    /* Append common columns */
+
+    fields = fields ++ Array(
+      created,
+      modified,
+      spec_version_sdo,
+      confidence,
+      created_by_ref,
+      external_references,
+      granular_markings,
+      labels,
+      lang,
+      object_marking_refs,
+      revoked
+    )
+
     StructType(fields)
 
   }
 
   def vulnerability:StructType = {
 
-    val fields = Array(
+    var fields = Array(
       /*
        * A list of external references which refer to non-STIX information. This property MAY be used to provide
        * one or more Vulnerability identifiers, such as a CVE ID [CVE]. When specifying a CVE ID, the source_name
@@ -2223,13 +2665,29 @@ object StixSchema {
       StructField("description", StringType, nullable = true)
     )
 
+    /* Append common columns */
+
+    fields = fields ++ Array(
+      created,
+      modified,
+      spec_version_sdo,
+      confidence,
+      created_by_ref,
+      external_references,
+      granular_markings,
+      labels,
+      lang,
+      object_marking_refs,
+      revoked
+    )
+
     StructType(fields)
 
   }
 
   def relationship:StructType = {
 
-    val fields = Array(
+    var fields = Array(
       /*
        * The name used to identify the type of Relationship. This value SHOULD be an exact value listed in
        * the relationships for the source and target SDO, but MAY be any string. The value of this property
@@ -2274,13 +2732,29 @@ object StixSchema {
       StructField("stop_time", TimestampType, nullable = true)
     )
 
+    /* Append common columns */
+
+    fields = fields ++ Array(
+      created,
+      modified,
+      spec_version_sro,
+      confidence,
+      created_by_ref,
+      external_references,
+      granular_markings,
+      labels,
+      lang,
+      object_marking_refs,
+      revoked
+    )
+
     StructType(fields)
 
   }
 
   def sighting:StructType = {
 
-    val fields = Array(
+    var fields = Array(
       /*
        * A description that provides more details and context about the Sighting.
        */
@@ -2338,13 +2812,29 @@ object StixSchema {
 
     )
 
+    /* Append common columns */
+
+    fields = fields ++ Array(
+      created,
+      modified,
+      spec_version_sro,
+      confidence,
+      created_by_ref,
+      external_references,
+      granular_markings,
+      labels,
+      lang,
+      object_marking_refs,
+      revoked
+    )
+
     StructType(fields)
 
   }
 
   def marking_definition:StructType = {
 
-    val fields = Array(
+    var fields = Array(
       /*
        * The type property identifies the type of object. The value of this property MUST be
        * marking-definition.
@@ -2364,13 +2854,24 @@ object StixSchema {
       StructField("definition",MapType(StringType, StringType), nullable = false)
     )
 
+    /* Append common columns */
+
+    fields = fields ++ Array(
+      created,
+      spec_version_sro,
+      created_by_ref,
+      external_references,
+      granular_markings,
+      object_marking_refs
+    )
+
     StructType(fields)
 
   }
 
   def language_content:StructType = {
 
-    val fields = Array(
+    var fields = Array(
       /*
        * The object_ref property identifies the id of the object that this Language Content applies to.
        * It MUST be the identifier for a STIX Object.
@@ -2412,6 +2913,22 @@ object StixSchema {
        * ignored.
        */
       StructField("contents", MapType(StringType, StringType), nullable = false)
+    )
+
+    /* Append common columns */
+
+    fields = fields ++ Array(
+      created,
+      modified,
+      spec_version_sro,
+      confidence,
+      created_by_ref,
+      external_references,
+      granular_markings,
+      labels,
+      lang,
+      object_marking_refs,
+      revoked
     )
 
     StructType(fields)
