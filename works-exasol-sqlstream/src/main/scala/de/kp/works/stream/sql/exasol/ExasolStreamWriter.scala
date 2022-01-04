@@ -315,7 +315,7 @@ case class ExasolStreamDataWriter(
 
   /**
    * This method write remaining buffer entries
-   * to the Redshift database and then clears
+   * to the Exasol database and then clears
    * the buffer and closes the JDBC connection
    */
   private def doWriteAndClose():Unit = {
