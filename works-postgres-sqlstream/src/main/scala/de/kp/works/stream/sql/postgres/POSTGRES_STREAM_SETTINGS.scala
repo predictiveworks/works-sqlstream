@@ -28,18 +28,26 @@ object POSTGRES_STREAM_SETTINGS {
    * connect and access Postgres
    */
   val DEFAULT_JDBC_DRIVER_NAME = "org.postgresql.Driver"
+  val DEFAULT_POSTGRES_PORT = "5432"
   /**
    * The maximum batch size of the internal cache
    * before writing to Postgres
    */
   val BATCH_SIZE = "batch.size"
+
+  val POSTGRES_DATABASE    = "postgres.database"
+  val POSTGRES_HOST        = "postgres.host"
   val POSTGRES_JDBC_DRIVER = "postgres.jdbc.driver"
   /**
    * The maximum number of retries to write
    * to a Postgres instance
    */
   val POSTGRES_MAX_RETRIES = "postgres.max.retries"
+  val POSTGRES_PASSWORD    = "postgres.password"
+  val POSTGRES_PORT        = "postgres.port"
+  val POSTGRES_PRIMARY_KEY = "postgres.primary.key"
   val POSTGRES_TABLE       = "postgres.table"
   val POSTGRES_TIMEOUT     = "postgres.timeout"
+  val POSTGRES_USER        = "postgres.username"
 
 }
