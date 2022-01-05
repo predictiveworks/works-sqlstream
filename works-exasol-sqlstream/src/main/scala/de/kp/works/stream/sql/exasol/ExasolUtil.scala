@@ -29,7 +29,7 @@ import scala.util.Try
 
 object ExasolUtil extends JdbcUtil {
   /**
-   * Compute the SAP HANA SQL schema string for the
+   * Compute the Exasol SQL schema string for the
    * given Spark SQL Schema.
    */
   def buildSqlSchema(schema: StructType, options:ExasolOptions): String = {

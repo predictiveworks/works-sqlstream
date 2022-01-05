@@ -25,9 +25,9 @@ import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.sources.v2.writer.{DataWriter, DataWriterFactory, WriterCommitMessage}
 import org.apache.spark.sql.sources.v2.writer.streaming.StreamWriter
 import org.apache.spark.sql.streaming.OutputMode
-import org.apache.spark.sql.types.StructType
+import org.apache.spark.sql.types.{StructField, StructType}
 
-import java.sql.{Connection, PreparedStatement}
+import java.sql.{Connection, PreparedStatement, SQLException}
 import scala.collection.mutable.ArrayBuffer
 
 /**
@@ -117,6 +117,29 @@ case class PostgresStreamDataWriter(
 
   private var conn: Connection = _
   private var stmt: PreparedStatement = _
+  /*
+   * The field specification combines a JDBC SQL type
+   * and its SQL data type counterpart. It is retrieved
+   * while validating the provided table and schema and
+   * is used to fill prepared statements
+   */
+  private var fieldSpec:Seq[(Int, StructField)] = _
+  /*
+   * Extract schema meta information
+   */
+  private val numFields = schema.fields.length
+
+  /*
+   * The UPSERT SQL statement is built from the provided
+   * schema specification as the Postgres stream writer
+   * ensures that table schema and provided schema are
+   * identical
+   */
+  private val upsertSql:String =
+    PostgresUtil.createUpsertSql(schema, options)
+
+  private val maxRetries = options.getMaxRetries
+  private val timeoutSeconds = options.getConnectionTimeout
 
   /*
    * Check whether the configured Postgres database
@@ -152,7 +175,46 @@ case class PostgresStreamDataWriter(
    * contains the specified table and schema
    */
   private def validate(): Unit = {
-    // TODO
+
+    conn = PostgresUtil.getConnection(options)
+    /*
+     * Create the specified table if it does
+     * not exist
+     */
+    if (!PostgresUtil.createTableIfNotExist(conn, schema, options))
+      throw new Exception(
+        s"Trying to connect to Postgres database creating the provided table (if not exists) failed.")
+    /*
+     * Retrieve the database schema; we expect that
+     * the table exists and its column schema is
+     * available
+     */
+    fieldSpec = PostgresUtil.getColumnTypes(conn, options.getTable)
+    if (fieldSpec.isEmpty)
+      throw new Exception(
+        s"Trying to retrieve metadata from Postgres database table failed.")
+
+    /*
+     * Compare each schema field and table column;
+     * we expect that the order of fields is the same
+     */
+    val schemaFields = schema.fields
+    schemaFields.indices.foreach(i => {
+
+      val schemaField = schemaFields(i)
+      val (_, tableField)  = fieldSpec(i)
+
+      if (schemaField.name != tableField.name)
+        throw new Exception(s"Schema field name and table column name do not match.")
+
+      if (schemaField.dataType != tableField.dataType)
+        throw new Exception(s"Schema field data type and table column type do not match.")
+
+      if (schemaField.nullable != tableField.nullable)
+        throw new Exception(s"Schema field nullable and table column nullable do not match.")
+
+    })
+
   }
 
   /**
@@ -160,7 +222,71 @@ case class PostgresStreamDataWriter(
    * and a retry in case of a SQLException
    */
   private def doWriteAndResetBuffer(): Unit = {
-    // TODO
+
+    resetConnAndStmt()
+
+    var numRetries = 0
+    val size = buffer.size
+
+    while (numRetries <= maxRetries) {
+
+      try {
+
+        val start = System.currentTimeMillis()
+        val iterator = buffer.iterator
+
+        while (iterator.hasNext) {
+          val row = iterator.next()
+          var i = 0
+          while (i < numFields) {
+            /*
+             * Fill prepared SQL statement with row values
+             */
+            if (row.isNullAt(i)) {
+              val (sqlType, _) = fieldSpec(i)
+              stmt.setNull(i + 1, sqlType)
+            }
+            else
+              upsertValue(stmt, row, i)
+
+            i += 1
+
+          }
+
+          stmt.addBatch()
+
+        }
+        stmt.executeBatch()
+        buffer.clear()
+
+        log.debug(s"Successful write of $size records,"
+          + s"with retry number $numRetries, cost ${System.currentTimeMillis() - start} ms")
+
+        /* Abort condition for while loop */
+        numRetries = maxRetries + 1
+
+      } catch {
+        case e: SQLException =>
+          if (numRetries <= maxRetries) {
+            numRetries += 1
+            resetConnAndStmt()
+
+            log.warn(s"Failed to write $size records, retry number $numRetries!", e)
+
+          } else {
+            log.error(s"Failed to write $size records,"
+              + s"reach max retry number $maxRetries, abort writing!")
+
+            throw e
+          }
+
+        case t: Throwable =>
+          log.error(s"Failed to write $size records, not suited for retry , writing to Postgres aborted.", t)
+          throw t
+      }
+
+    }
+
   }
 
   /**
@@ -184,6 +310,28 @@ case class PostgresStreamDataWriter(
       }
     }
 
+  }
+
+  private def upsertValue(stmt:PreparedStatement, row:Row, pos:Int):Unit = {
+    val (_, field) = fieldSpec(pos)
+    PostgresUtil.upsertValue(conn, stmt, row, pos, field.dataType)
+  }
+
+  private def resetConnAndStmt(): Unit = {
+    /*
+     * Use a local connection cache, to avoid
+     * getting a new connection every time.
+     */
+    if (conn == null || !conn.isValid(timeoutSeconds)) {
+
+      conn = PostgresUtil.getConnection(options)
+      stmt = conn.prepareStatement(upsertSql)
+
+      log.info("Current connection is invalid, create a new one.")
+
+    } else {
+      log.debug("Current connection is valid, reuse it.")
+    }
   }
 
 }

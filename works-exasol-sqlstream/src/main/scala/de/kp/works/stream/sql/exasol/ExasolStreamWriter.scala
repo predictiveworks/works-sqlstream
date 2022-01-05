@@ -120,7 +120,7 @@ case class ExasolStreamDataWriter(
   private var stmt: PreparedStatement = _
   /*
    * The INSERT SQL statement is built from the provided
-   * schema specification as the Redshift stream writer
+   * schema specification as the Exasol stream writer
    * ensures that table schema and provided schema are
    * identical
    */
@@ -305,7 +305,7 @@ case class ExasolStreamDataWriter(
           }
 
         case t: Throwable =>
-          log.error(s"Failed to write $size records, not suited for retry , writing to Redshift aborted.", t)
+          log.error(s"Failed to write $size records, not suited for retry , writing to Exasol aborted.", t)
           throw t
       }
 

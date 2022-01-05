@@ -31,4 +31,22 @@ class PostgresOptions(options: DataSourceOptions) extends Logging {
   def getBatchSize:Int =
     settings.getOrElse(POSTGRES_STREAM_SETTINGS.BATCH_SIZE, "1000").toInt
 
+  /**
+   * The connection timeout is specified in seconds
+   * and defaults to 10
+   */
+  def getConnectionTimeout:Int =
+    settings.getOrElse(POSTGRES_STREAM_SETTINGS.POSTGRES_TIMEOUT, "10").toInt
+
+  def getJdbcDriver:String =
+    settings.getOrElse(POSTGRES_STREAM_SETTINGS.POSTGRES_JDBC_DRIVER,
+      POSTGRES_STREAM_SETTINGS.DEFAULT_JDBC_DRIVER_NAME)
+
+  def getMaxRetries:Int =
+    settings.getOrElse(POSTGRES_STREAM_SETTINGS.POSTGRES_MAX_RETRIES, "3").toInt
+
+  def getTable:String =
+    settings.getOrElse(POSTGRES_STREAM_SETTINGS.POSTGRES_TABLE,
+      throw new Exception(s"No Postgres table specified."))
+
 }
