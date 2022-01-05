@@ -138,7 +138,24 @@ object PostgresUtil extends JdbcUtil {
    * ensures that table schema and provided schema are
    * identical
    */
-  def createUpsertSql(schema:StructType, options:PostgresOptions): String = ???
+  def createUpsertSql(schema:StructType, options:PostgresOptions): String = {
+
+    val table = options.getTable
+
+    val columns = schema.fields
+      .map(field => s"""${field.name}""")
+      .mkString(",")
+
+    val values = schema.fields.map(_ => "?").mkString(",")
+    val insertSql = s"""INSERT INTO $table ($columns) VALUES($values)"""
+
+    if (options.getPrimaryKey.isEmpty) return insertSql
+    val primaryKey = options.getPrimaryKey.get
+
+    val upsertSql = insertSql + s" ON CONFLICT($primaryKey) DO NOTHING"
+    upsertSql
+
+  }
 
   def getConnection(options: PostgresOptions): Connection = {
 
@@ -175,6 +192,47 @@ object PostgresUtil extends JdbcUtil {
    * provided prepared statement, controlled by the Spark
    * data type
    */
-  def upsertValue(conn:Connection, stmt:PreparedStatement, row:Row, pos:Int, dataType:DataType):Unit = ???
+  def upsertValue(conn:Connection, stmt:PreparedStatement, row:Row, pos:Int, dataType:DataType):Unit = {
+
+    dataType match {
+      case ArrayType(dt, _) =>
+        val btype = getBasicTypeName(dt)
+        if (btype.isEmpty)
+          throw new Exception(s"Data type `${dt.simpleString}` is not supported.")
+
+        else {
+          val array = conn.createArrayOf(
+            btype.get, row.getSeq[AnyRef](pos).toArray)
+          stmt.setArray(pos + 1, array)
+        }
+      case BinaryType =>
+        stmt.setBytes(pos + 1, row.getAs[Array[Byte]](pos))
+      case BooleanType =>
+        stmt.setBoolean(pos + 1, row.getBoolean(pos))
+      case ByteType =>
+        stmt.setInt(pos + 1, row.getByte(pos))
+      case DateType =>
+        stmt.setDate(pos + 1, row.getAs[java.sql.Date](pos))
+      case _: DecimalType =>
+        stmt.setBigDecimal(pos + 1, row.getDecimal(pos))
+      case DoubleType =>
+        stmt.setDouble(pos + 1, row.getDouble(pos))
+      case FloatType =>
+        stmt.setFloat(pos + 1, row.getFloat(pos))
+      case IntegerType =>
+        stmt.setInt(pos + 1, row.getInt(pos))
+      case LongType =>
+        stmt.setLong(pos + 1, row.getLong(pos))
+      case ShortType =>
+        stmt.setInt(pos + 1, row.getInt(pos))
+      case StringType =>
+        stmt.setString(pos + 1, row.getString(pos))
+      case TimestampType =>
+        stmt.setTimestamp(pos + 1, row.getAs[java.sql.Timestamp](pos))
+      case _ =>
+        throw new Exception(s"Data type `${dataType.simpleString}` is not supported.")
+    }
+
+  }
 
 }
