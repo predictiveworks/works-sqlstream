@@ -19,7 +19,17 @@ package de.kp.works.stream.sql.opcua
  *
  */
 
-class OpcuaClient {
+import de.kp.works.stream.sql.Logging
+import org.eclipse.milo.opcua.sdk.client.OpcUaClient
+import org.eclipse.milo.opcua.sdk.client.api.subscriptions.UaSubscription
+
+class OpcuaReceiver(options:OpcuaOptions) extends Logging {
+
+  private var opcUaClient:OpcUaClient = _
+  private var subscription:UaSubscription = _
+
+  private val identityProvider = options.getIdentityProvider
+  private val subscribeOnStartup = options.getTopics
 
   def close():Unit = ???
 

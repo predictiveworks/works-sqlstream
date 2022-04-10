@@ -50,8 +50,8 @@ class OpcuaSource(options: OpcuaOptions)
   @GuardedBy("this")
   private var lastOffsetCommitted: LongOffset = LongOffset(-1L)
 
-  private var client:OpcuaClient = _
-  buildOpcuaClient()
+  private var receiver:OpcuaReceiver = _
+  buildOpcuaReceiver()
 
   override def commit(offset: Offset): Unit = synchronized {
 
@@ -161,14 +161,14 @@ class OpcuaSource(options: OpcuaOptions)
    */
   override def stop(): Unit = synchronized {
 
-    client.disconnect()
+    receiver.disconnect()
     persistence.close()
 
-    client.close()
+    receiver.close()
 
   }
 
-  private def buildOpcuaClient(): Unit = {
+  private def buildOpcuaReceiver(): Unit = {
     // TODO
   }
 

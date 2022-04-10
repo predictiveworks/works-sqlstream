@@ -23,6 +23,13 @@ object OPCUA_STREAM_SETTINGS {
 
   val FORMAT = "de.kp.works.stream.sql.opcua.OpcuaSourceProvider"
 
+  val OPCUA_TOPICS = "opcua.topics"
+  /**
+   * User credentials
+   */
+  val OPCUA_USER_NAME = "opcua.user.name"
+  val OPCUA_USER_PASS = "opcua.user.pass"
+
   val PERSISTENCE = "persistence"
   /**
    * The schema type controls the output schema

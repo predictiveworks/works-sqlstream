@@ -20,13 +20,38 @@ package de.kp.works.stream.sql.opcua
  */
 
 import org.apache.spark.sql.sources.v2.DataSourceOptions
+import org.eclipse.milo.opcua.sdk.client.api.identity.{AnonymousProvider, IdentityProvider, UsernameProvider}
 import org.rocksdb.RocksDB
 
 import scala.collection.JavaConverters.mapAsScalaMapConverter
+import scala.collection.mutable
+
+case class OpcuaCredentials(user:String, pass:String)
 
 class OpcuaOptions(options: DataSourceOptions) {
 
   private val settings:Map[String,String] = options.asMap.asScala.toMap
+
+  def getIdentityProvider: IdentityProvider = {
+
+    val creds = getCredentials
+    if (creds.isEmpty) new AnonymousProvider
+    else {
+      new UsernameProvider(creds.get.user, creds.get.pass)
+    }
+
+  }
+
+  private def getCredentials:Option[OpcuaCredentials] = {
+
+    val user = settings.get(OPCUA_STREAM_SETTINGS.OPCUA_USER_NAME)
+    val pass = settings.get(OPCUA_STREAM_SETTINGS.OPCUA_USER_PASS)
+
+    if (user.isEmpty || pass.isEmpty) None
+    else
+      Some(OpcuaCredentials(user.get, pass.get))
+
+  }
 
   def getPersistence:RocksDB = {
 
@@ -45,6 +70,24 @@ class OpcuaOptions(options: DataSourceOptions) {
     else
       throw new Exception(s"Schema type `$schemaType` not supported.")
 
+  }
+
+  /**
+   * The list of OPC-UA topics to subscribe
+   * to during startup. Sample:
+   *
+   * "node/ns=2;s=ExampleDP_Float.ExampleDP_Arg1",
+   * "node/ns=2;s=ExampleDP_Text.ExampleDP_Text1",
+   * "path/Objects/Test/+/+",
+   */
+  def getTopics:List[String] = {
+
+    val topics = settings.get(OPCUA_STREAM_SETTINGS.OPCUA_TOPICS)
+    if (topics.isEmpty) List.empty[String]
+    else {
+      topics.get.split(",").toList
+
+    }
   }
 
 }
