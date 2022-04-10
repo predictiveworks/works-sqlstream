@@ -176,6 +176,7 @@ class AkkaSource(options: AkkaOptions)
     (lastOffsetCommitted.offset until newOffset.get.offset)
       .foreach { x =>
         messages.remove(x + 1)
+        store.remove[Row](x + 1)
       }
 
     lastOffsetCommitted = newOffset.get
