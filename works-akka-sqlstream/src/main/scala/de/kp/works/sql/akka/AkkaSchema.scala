@@ -1,7 +1,7 @@
 package de.kp.works.sql.akka
 
-/*
- * Copyright (c) 2020 - 2021 Dr. Krusche & Partner PartG. All rights reserved.
+/**
+ * Copyright (c) 2020 - 2022 Dr. Krusche & Partner PartG. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not
  * use this file except in compliance with the License. You may obtain a copy of
@@ -19,19 +19,21 @@ package de.kp.works.sql.akka
  *
  */
 
-object AKKA_STREAM_SETTINGS {
+import org.apache.spark.sql.types._
 
-  val FORMAT_AKKA = "de.kp.works.stream.sql.akka.AkkaSourceProvider"
+object AkkaSchema {
 
-  val AKKA_MAX_RETRIES   = "akka.max.retries"
-  val AKKA_PUBLISHER_URL = "akka.publisher.url"
-  val AKKA_TIME_RANGE    = "akka.time.range"
+  def getSchema(schemaType:String):StructType = {
 
-  val PERSISTENCE = "persistence"
-  /**
-   * The schema type controls the output schema
-   * assigned to the incoming Akka stream
-   */
-  val SCHEMA_TYPE = "schema.type"
+    schemaType match {
+      case "default" =>
+
+        StructType(
+          StructField("value", StringType) :: StructField("timestamp", TimestampType) :: Nil)
+
+      case _ =>
+        throw new Exception(s"Schema type `$schemaType` not supported.")
+    }
+  }
 
 }

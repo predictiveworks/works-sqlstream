@@ -1,7 +1,7 @@
 package de.kp.works.sql.akka
 
-/*
- * Copyright (c) 2020 - 2021 Dr. Krusche & Partner PartG. All rights reserved.
+/**
+ * Copyright (c) 2020 - 2022 Dr. Krusche & Partner PartG. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not
  * use this file except in compliance with the License. You may obtain a copy of
@@ -19,32 +19,214 @@ package de.kp.works.sql.akka
  *
  */
 
-import de.kp.works.stream.sql.Logging
+import akka.actor.SupervisorStrategy.{Escalate, Restart}
+import akka.actor.{Actor, ActorRef, ActorSystem, OneForOneStrategy, PoisonPill, PossiblyHarmful, Props}
+import akka.pattern.ask
+import akka.util.Timeout
+import de.kp.works.stream.sql.{Logging, LongOffset}
+import org.apache.spark.sql.Row
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.sources.v2.reader.InputPartition
 import org.apache.spark.sql.sources.v2.reader.streaming.{MicroBatchReader, Offset}
 import org.apache.spark.sql.types.StructType
 
+import java.nio.ByteBuffer
 import java.util
 import java.util.Optional
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.atomic.AtomicInteger
+import javax.annotation.concurrent.GuardedBy
+import scala.collection.concurrent.TrieMap
+import scala.concurrent.{Await, Future}
+import scala.concurrent.duration.{Duration, DurationInt, FiniteDuration}
+
+case class SubscribeReceiver(receiverActor: ActorRef)
+case class UnsubscribeReceiver(receiverActor: ActorRef)
+
+case class Statistics(
+  numberOfMsgs: Int,
+  numberOfWorkers: Int,
+  numberOfHiccups: Int,
+  otherInfo: String)
+
+sealed trait ReceiverRecord
+case class SingleRecord(item: String) extends ReceiverRecord
+
+object Ack extends ReceiverRecord
 
 class AkkaSource(options: AkkaOptions)
   extends MicroBatchReader with Logging {
 
-  override def commit(offset: Offset): Unit = ???
+  private var startOffset: Offset = _
+  private var endOffset: Offset   = _
 
-  override def deserializeOffset(s: String): Offset = ???
+  private val messages = new TrieMap[Long, Row]
 
-  override def getStartOffset: Offset = ???
+  private val persistence = options.getPersistence
+  private val store = new AkkaEventStore(persistence)
 
-  override def getEndOffset: Offset = ???
+  private val initLock = new CountDownLatch(1)
+
+  @GuardedBy("this")
+  private var currentOffset: LongOffset = LongOffset(-1L)
+
+  @GuardedBy("this")
+  private var lastOffsetCommitted: LongOffset = LongOffset(-1L)
+
+  private var actorSystem: ActorSystem = _
+  private var actorSupervisor: ActorRef = _
+
+  initialize()
+  /**
+   * Define the Actor receiver
+   */
+  private class ActorReceiver(publisherUrl:String) extends Actor {
+
+    lazy private val remotePublisher =
+      context.actorSelection(publisherUrl)
+
+    override def preStart(): Unit =
+      remotePublisher ! SubscribeReceiver(context.self)
+
+    override def postStop(): Unit =
+      remotePublisher ! UnsubscribeReceiver(context.self)
+    /**
+     * The actor receiver supports [String] messages
+     * and serializable bytes
+     */
+    override def receive: PartialFunction[Any, Unit] = {
+      case bytes: ByteBuffer => store(new String(bytes.array()))
+      case message: String => store(message)
+    }
+
+    def store(item: String): Unit = {
+      context.parent ! SingleRecord(item)
+    }
+
+  }
+
+  private class ActorSupervisor(publisherUrl:String) extends Actor {
+    /**
+     * Parameters to control the handling of failed child actors:
+     * it is the number of retries within a certain time window.
+     *
+     * The supervisor strategy restarts a child up to 10 restarts
+     * per minute. The child actor is stopped if the restart count
+     * exceeds maxNrOfRetries during the withinTimeRange duration.
+     */
+    private val maxRetries: Int = options.getMaxRetries
+    protected val timeRange: FiniteDuration = {
+      val value = options.getTimeRange
+      value.millis
+    }
+
+    override val supervisorStrategy: OneForOneStrategy =
+      OneForOneStrategy(maxNrOfRetries = maxRetries, withinTimeRange = timeRange) {
+        case _: RuntimeException => Restart
+        case _: Exception => Escalate
+      }
+
+    private val worker = context
+      .actorOf(Props(new ActorReceiver(publisherUrl)), "ActorReceiver")
+
+    private val n: AtomicInteger = new AtomicInteger(0)
+    private val hiccups: AtomicInteger = new AtomicInteger(0)
+
+    override def receive: PartialFunction[Any, Unit] = {
+
+      case data =>
+        initLock.await()
+        val temp = currentOffset.offset + 1
+
+        data match {
+          case SingleRecord(msg) =>
+            messages.put(temp, message2Row(msg))
+            n.incrementAndGet()
+        }
+
+        currentOffset = LongOffset(temp)
+
+    }
+
+  }
+
+  private def message2Row(message:String):Row = {
+    val timestamp = new java.sql.Timestamp(System.currentTimeMillis())
+    Row.fromSeq(Seq(message, timestamp))
+  }
+
+  override def commit(offset: Offset): Unit = {
+
+    val newOffset = LongOffset.convert(offset)
+    if (newOffset.isEmpty) {
+
+      val message = s"[AkkaSource] Method `commit` received an offset (${offset.toString}) that did not originate from this source.)"
+      sys.error(message)
+
+    }
+
+    val offsetDiff = (newOffset.get.offset - lastOffsetCommitted.offset).toInt
+    if (offsetDiff < 0) {
+
+      val message = s"[AkkaSource] Offsets committed are out of order: $lastOffsetCommitted followed by $offset.toString"
+      sys.error(message)
+
+    }
+
+    (lastOffsetCommitted.offset until newOffset.get.offset)
+      .foreach { x =>
+        messages.remove(x + 1)
+      }
+
+    lastOffsetCommitted = newOffset.get
+
+  }
+
+  override def deserializeOffset(json: String): Offset = {
+    LongOffset(json.toLong)
+  }
+
+  override def getStartOffset: Offset =
+    Option(startOffset)
+      .getOrElse(throw new IllegalStateException("Start offset is not set."))
+
+  override def getEndOffset: Offset =
+    Option(endOffset)
+      .getOrElse(throw new IllegalStateException("End offset is not set."))
 
   override def planInputPartitions(): util.List[InputPartition[InternalRow]] = ???
 
-  override def readSchema(): StructType = ???
+  override def readSchema(): StructType =
+    AkkaSchema.getSchema(options.getSchemaType)
 
-  override def setOffsetRange(optional: Optional[Offset], optional1: Optional[Offset]): Unit = ???
+  override def setOffsetRange(start: Optional[Offset], end: Optional[Offset]): Unit = synchronized {
 
-  override def stop(): Unit = ???
+    startOffset = start.orElse(LongOffset(-1L))
+    endOffset   = end.orElse(currentOffset)
+
+  }
+
+  override def stop(): Unit = {
+
+    actorSupervisor ! PoisonPill
+    persistence.close()
+
+    Await.ready(actorSystem.terminate(), Duration.Inf)
+
+  }
+
+  private def initialize():Unit = {
+
+    actorSystem = options.createActorSystem
+    actorSupervisor = actorSystem
+      .actorOf(Props(new ActorSupervisor(options.getPublisherUrl)), "ActorSupervisor")
+
+    if (store.maxProcessedOffset > 0) {
+      currentOffset = LongOffset(store.maxProcessedOffset)
+    }
+
+    initLock.countDown()
+
+  }
 
 }

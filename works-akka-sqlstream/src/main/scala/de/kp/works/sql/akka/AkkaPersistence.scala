@@ -1,7 +1,7 @@
 package de.kp.works.sql.akka
 
-/*
- * Copyright (c) 2020 - 2021 Dr. Krusche & Partner PartG. All rights reserved.
+/**
+ * Copyright (c) 2020 - 2022 Dr. Krusche & Partner PartG. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not
  * use this file except in compliance with the License. You may obtain a copy of
@@ -19,19 +19,31 @@ package de.kp.works.sql.akka
  *
  */
 
-object AKKA_STREAM_SETTINGS {
+import org.rocksdb.{Options, RocksDB}
+import java.util.Objects
 
-  val FORMAT_AKKA = "de.kp.works.stream.sql.akka.AkkaSourceProvider"
+object AkkaPersistence {
 
-  val AKKA_MAX_RETRIES   = "akka.max.retries"
-  val AKKA_PUBLISHER_URL = "akka.publisher.url"
-  val AKKA_TIME_RANGE    = "akka.time.range"
+  var persistence: RocksDB = _
 
-  val PERSISTENCE = "persistence"
-  /**
-   * The schema type controls the output schema
-   * assigned to the incoming Akka stream
-   */
-  val SCHEMA_TYPE = "schema.type"
+  def getOrCreate(path: String): RocksDB = {
+
+    if (Objects.isNull(persistence)) {
+      RocksDB.loadLibrary()
+      persistence = RocksDB.open(new Options().setCreateIfMissing(true), path)
+    }
+
+    persistence
+
+  }
+
+  def close(): Unit = {
+
+    if (!Objects.isNull(persistence)) {
+      persistence.close()
+      persistence = null
+    }
+
+  }
 
 }

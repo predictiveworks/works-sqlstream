@@ -1,7 +1,7 @@
 package de.kp.works.sql.akka
 
-/*
- * Copyright (c) 2020 - 2021 Dr. Krusche & Partner PartG. All rights reserved.
+/**
+ * Copyright (c) 2020 - 2022 Dr. Krusche & Partner PartG. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not
  * use this file except in compliance with the License. You may obtain a copy of
@@ -36,7 +36,7 @@ class AkkaSourceProvider extends DataSourceV2
       def e(s: String) = new IllegalArgumentException(s)
 
       if (schema.isPresent) {
-        throw e("The mqtt source does not support a user-specified schema.")
+        throw e("The Akka source does not support a user-specified schema.")
       }
       /*
        * Transform options provided with the respective
