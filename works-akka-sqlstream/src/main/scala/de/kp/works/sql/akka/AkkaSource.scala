@@ -20,15 +20,13 @@ package de.kp.works.sql.akka
  */
 
 import akka.actor.SupervisorStrategy.{Escalate, Restart}
-import akka.actor.{Actor, ActorRef, ActorSystem, OneForOneStrategy, PoisonPill, PossiblyHarmful, Props}
-import akka.pattern.ask
-import akka.util.Timeout
+import akka.actor._
 import de.kp.works.stream.sql.{Logging, LongOffset}
-import org.apache.spark.sql.Row
 import org.apache.spark.sql.catalyst.InternalRow
-import org.apache.spark.sql.sources.v2.reader.InputPartition
 import org.apache.spark.sql.sources.v2.reader.streaming.{MicroBatchReader, Offset}
+import org.apache.spark.sql.sources.v2.reader.{InputPartition, InputPartitionReader}
 import org.apache.spark.sql.types.StructType
+import org.apache.spark.sql.{Row, SparkSession}
 
 import java.nio.ByteBuffer
 import java.util
@@ -37,7 +35,9 @@ import java.util.concurrent.CountDownLatch
 import java.util.concurrent.atomic.AtomicInteger
 import javax.annotation.concurrent.GuardedBy
 import scala.collection.concurrent.TrieMap
-import scala.concurrent.{Await, Future}
+import scala.collection.JavaConverters._
+import scala.collection.mutable.ListBuffer
+import scala.concurrent.Await
 import scala.concurrent.duration.{Duration, DurationInt, FiniteDuration}
 
 case class SubscribeReceiver(receiverActor: ActorRef)
@@ -194,7 +194,60 @@ class AkkaSource(options: AkkaOptions)
     Option(endOffset)
       .getOrElse(throw new IllegalStateException("End offset is not set."))
 
-  override def planInputPartitions(): util.List[InputPartition[InternalRow]] = ???
+  override def planInputPartitions(): util.List[InputPartition[InternalRow]] = {
+
+    val rawMessages: IndexedSeq[Row] = synchronized {
+
+      val sliceStart = LongOffset.convert(startOffset).get.offset + 1
+      val sliceEnd   = LongOffset.convert(endOffset).get.offset + 1
+
+      for (i <- sliceStart until sliceEnd) yield {
+        val message = messages(i)
+        store.store(i,message)
+
+        messages(i)
+      }
+
+    }
+
+    val spark = SparkSession.getActiveSession.get
+    val numPartitions = spark.sparkContext.defaultParallelism
+    /*
+     * `slices` prepares the partitioned output
+     */
+    val slices = Array.fill(numPartitions)(new ListBuffer[Row])
+    rawMessages.zipWithIndex
+      .foreach {case (rawEvent, index) => slices(index % numPartitions).append(rawEvent)}
+    /*
+     * Transform `slices` into [DataFrame] compliant [InternalRow]s.
+     * Note, the order of values must be compliant to the defined
+     * schema
+     */
+    (0 until numPartitions).map{i =>
+
+      val slice = slices(i)
+      new InputPartition[InternalRow] {
+        override def createPartitionReader(): InputPartitionReader[InternalRow] =
+          new InputPartitionReader[InternalRow] {
+            private var currentIdx = -1
+
+            override def next(): Boolean = {
+              currentIdx += 1
+              currentIdx < slice.size
+            }
+
+            override def get(): InternalRow = {
+              val values = slice(currentIdx).toSeq
+              InternalRow(values)
+            }
+
+            override def close(): Unit = {/* Do nothing */}
+          }
+      }
+
+    }.toList.asJava
+
+  }
 
   override def readSchema(): StructType =
     AkkaSchema.getSchema(options.getSchemaType)
