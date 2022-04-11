@@ -161,10 +161,8 @@ class OpcuaSource(options: OpcuaOptions)
    */
   override def stop(): Unit = synchronized {
 
-    receiver.disconnect()
+    receiver.shutdown().get()
     persistence.close()
-
-    receiver.close()
 
   }
 

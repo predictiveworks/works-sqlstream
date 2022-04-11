@@ -19,25 +19,33 @@ package de.kp.works.stream.sql.opcua
  *
  */
 
-object OPCUA_STREAM_SETTINGS {
+object OpcuaTopicType extends Enumeration {
 
-  val FORMAT = "de.kp.works.stream.sql.opcua.OpcuaSourceProvider"
-
-  val OPCUA_RETRY_WAIT      = "opcua.retry.wait"
-  val OPCUA_SECURITY_FOLDER = "opcua.security.folder"
-  val OPCUA_SECURITY_POLICY = "opcua.security.policy"
-  val OPCUA_TOPICS          = "opcua.topics"
-  /**
-   * User credentials
-   */
-  val OPCUA_USER_NAME = "opcua.user.name"
-  val OPCUA_USER_PASS = "opcua.user.pass"
-
-  val PERSISTENCE = "persistence"
-  /**
-   * The schema type controls the output schema
-   * assigned to the incoming Opcua stream
-   */
-  val SCHEMA_TYPE = "schema.type"
+  val NodeId: OpcuaTopicType.Value = Value("NodeId")
+  val Path: OpcuaTopicType.Value = Value("Path")
 
 }
+
+case class OpcuaTopic(
+   address:String,
+   browsePath:String = "",
+   topicName:String,
+   topicType: OpcuaTopicType.Value,
+   systemName:String) {
+  /**
+   * The current implementation does not
+   * validate the provided OPCUA topic
+   */
+  def isValid:Boolean = {
+    true
+  }
+
+}
+
+case class OpcuaTopicValue(
+  sourceTime: Long,
+  sourcePicoseconds: Int = 0,
+  serverTime: Long,
+  serverPicoseconds: Int = 0,
+  value: Any,
+  statusCode: Long)
