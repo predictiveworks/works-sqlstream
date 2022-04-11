@@ -127,12 +127,18 @@ class OpcuaSecurity(options:OpcuaOptions) {
   /**
    * A helper method to build a self-signed certificate
    * from the provided certificate meta information.
+   *
+   * This certificate is built for use cases where no
+   * (external) keystore exists.
    */
   private def buildCertificate(keyPair:KeyPair):X509Certificate = {
 
     val certInfo = options.getCertInfo
     val signatureAlgorithm = getSignatureAlgorithm
-
+    /*
+     * The self-signed certificate builder is part
+     * of the Eclipse Milo project.
+     */
     val builder = new SelfSignedCertificateBuilder(keyPair)
       .setSignatureAlgorithm(signatureAlgorithm)
       /*

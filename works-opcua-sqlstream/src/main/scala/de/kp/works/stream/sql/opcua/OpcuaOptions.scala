@@ -181,7 +181,11 @@ class OpcuaOptions(options: DataSourceOptions) {
     securityPath
 
   }
-
+  /**
+   * The configuration of the security policy is
+   * part of the dynamic settings (in contrast to
+   * file based configurations)
+   */
   def getSecurityPolicy:SecurityPolicy = {
     /*
      * The security policies supported by Eclipse Milo
