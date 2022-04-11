@@ -20,6 +20,7 @@ package de.kp.works.stream.sql.opcua
  */
 
 import de.kp.works.stream.sql.Logging
+import org.bouncycastle.jce.provider.BouncyCastleProvider
 import org.eclipse.milo.opcua.sdk.client.OpcUaClient
 import org.eclipse.milo.opcua.sdk.client.api.config.{OpcUaClientConfig, OpcUaClientConfigBuilder}
 import org.eclipse.milo.opcua.sdk.client.api.{ServiceFaultListener, UaClient}
@@ -30,6 +31,7 @@ import org.eclipse.milo.opcua.stack.core.types.builtin.{DateTime, LocalizedText,
 import org.eclipse.milo.opcua.stack.core.types.structured.{EndpointDescription, ServiceFault}
 import org.eclipse.milo.opcua.stack.core.util.EndpointUtil
 
+import java.security.Security
 import java.util.Optional
 import java.util.concurrent.{CompletableFuture, Future}
 import java.util.function.{BiConsumer, Consumer, Function}
@@ -96,13 +98,13 @@ class OpcuaReceiver(options:OpcuaOptions) extends Logging {
    * This is the main method to connect to the OPC-UA
    * server and subscribe.
    */
-  def start():Future[Boolean] = {
+  def start():Boolean = {
 
-    val future = new CompletableFuture[Boolean]()
+    var started = true
     try {
 
-      val res = connect().get()
-      if (res) {
+      val connected = connect()
+      if (connected) {
         subscribeOnStartup.foreach(pattern => {
           /*
            * node/ns=2;s=ExampleDP_Float.ExampleDP_Arg1
@@ -114,51 +116,48 @@ class OpcuaReceiver(options:OpcuaOptions) extends Logging {
 
             val subscriber = new OpcuaSubscriber(opcUaClient, options, subscription, opcuaHandler)
             try {
-              future.complete(subscriber.subscribeTopic(clientId, topic).get())
+              val subscribed = subscriber.subscribeTopic(clientId, topic).get()
+              if (!subscribed) started = false
 
             } catch {
               case t:Throwable =>
                 log.error("Starting OPC-UA connection failed with: " + t.getLocalizedMessage)
-                future.complete(false);
+                started = false
             }
           }
         })
-      }
-      else
-        future.complete(false)
+
+      } else started = false
 
     } catch {
       case t:Throwable =>
         log.error("Starting OPC-UA connection failed with: " + t.getLocalizedMessage)
-        future.complete(false)
+        started = false
     }
 
-    future
+    started
+
   }
 
   def shutdown():Future[Boolean] = {
     disconnect()
   }
 
-  private def connect():Future[Boolean] = {
+  private def connect():Boolean = {
 
-    val future = new CompletableFuture[Boolean]()
+    var connected = true
     try {
       /*
        * STEP #1: Create OPC-UA client
        */
-      val result = createClientAsync().get()
-      if (!result) {
-        future.complete(false)
-      }
+      val created = createClientAsync()
+      if (!created) connected = false
       else {
         /*
          * STEP #2: Connect to OPC-UA server
          */
         val result = connectClientAsync().get()
-        if (!result) {
-          future.complete(false)
-        }
+        if (!result) connected = false
         else {
           /*
            * STEP #3: Add fault & subscription listener
@@ -171,22 +170,20 @@ class OpcuaReceiver(options:OpcuaOptions) extends Logging {
 
           opcUaClient.getSubscriptionManager
             .addSubscriptionListener(subscriptionListener)
-
           /*
            * STEP #4: Create subscription
            */
           createSubscription()
-          future.complete(true)
 
         }
       }
 
     } catch {
       case _:Throwable =>
-        future.complete(false)
+        connected = false
     }
 
-    future
+    connected
   }
 
   private def disconnect():Future[Boolean] = {
@@ -204,41 +201,45 @@ class OpcuaReceiver(options:OpcuaOptions) extends Logging {
 
   }
 
-  private def createClientAsync():Future[Boolean] = {
-    val future = new CompletableFuture[Boolean]()
-    createClientWithRetry(future)
-    future
-  }
+  private def createClientAsync():Boolean = createClientWithRetry()
 
   /**
    * This method creates an OPC-UA client with a retry mechanism
    * in case an error occurred; the current implementation retries
    * after 5000 ms with a maximum of 10 retries
    */
-  @tailrec
-  private def createClientWithRetry(future:CompletableFuture[Boolean]):Unit = {
+  private def createClientWithRetry():Boolean = {
 
+    var created = true
     try {
       opcUaClient = createClient()
-      future.complete(true)
 
     } catch {
       case _:UaException =>
         Thread.sleep(options.getRetryWait)
-        createClientWithRetry(future)
+        created = createClientWithRetry()
 
       case _:Exception =>
-        future.complete(false)
+        created = false
 
     }
+
+    created
   }
 
   private def createClient():OpcUaClient = {
+
+    Security.addProvider(new BouncyCastleProvider())
 
     val selectEndpoint = new Function[java.util.List[EndpointDescription], Optional[EndpointDescription]] {
       override def apply(endpoints: java.util.List[EndpointDescription]): Optional[EndpointDescription] = {
         Optional.of[EndpointDescription](
           endpoints
+            /*
+             * Restricts endpoints to those that either have
+             * no security policy implemented or a policy that
+             * refers to the configured policy.
+             */
             .filter(e => endpointFilter(e))
             .map(e => endpointUpdater(e))
             .head)
@@ -297,7 +298,10 @@ class OpcuaReceiver(options:OpcuaOptions) extends Logging {
        * Delete topics from registry
        */
       topics.foreach(topic => OpcuaRegistry.delTopic(topic))
-
+      /*
+       * Note: the subscriber adds the topics to
+       * the registry again
+       */
       val subscriber = new OpcuaSubscriber(opcUaClient, options, subscription, opcuaHandler)
       subscriber.subscribeTopics(topics)
 
@@ -305,15 +309,19 @@ class OpcuaReceiver(options:OpcuaOptions) extends Logging {
   }
 
   /**
+   * __create_client__
+   *
    * Method restricts endpoints to those that either
    * have no security policy implemented or a policy
-   * the refers to configured policy.
+   * that refers to the configured policy.
    */
   private def endpointFilter(e:EndpointDescription):Boolean = {
     val securityPolicy = options.getSecurityPolicy
     securityPolicy == null || securityPolicy.getUri.equals(e.getSecurityPolicyUri)
   }
-
+  /**
+   * __create_client__
+   */
   private def endpointUpdater(e:EndpointDescription ):EndpointDescription = {
 
     if (!opcuaClientInfo.updateEndpointUrl) return e

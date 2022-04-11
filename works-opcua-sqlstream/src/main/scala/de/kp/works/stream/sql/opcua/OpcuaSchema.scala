@@ -19,13 +19,40 @@ package de.kp.works.stream.sql.opcua
  *
  */
 
-import org.apache.spark.sql.types.StructType
+import org.apache.spark.sql.types.{IntegerType, LongType, StringType, StructField, StructType}
 
 object OpcuaSchema {
   /*
    * This method determines the schema that is used
    * to represent OPCUA messages.
    */
-  def getSchema(schemaType:String): StructType = ???
+  def getSchema(schemaType:String): StructType = {
+
+    schemaType.toLowerCase match {
+      case "default" =>
+        StructType(Array(
+          /*
+           * TOPIC representation
+           */
+          StructField("address",    StringType, nullable = false),
+          StructField("browsePath", StringType, nullable = false),
+          StructField("topicName",  StringType, nullable = false),
+          StructField("topicType",  StringType, nullable = false),
+          StructField("systemName", StringType, nullable = false),
+          /*
+           * VALUE representation
+           */
+          StructField("sourceTime",        LongType, nullable = false),
+          StructField("sourcePicoseconds", IntegerType, nullable = false),
+          StructField("serverTime",        LongType, nullable = false),
+          StructField("serverPicoseconds", IntegerType, nullable = false),
+          StructField("statusCode",        LongType, nullable = false),
+          StructField("dataValueType",     StringType, nullable = false),
+          StructField("dataValueValue",    StringType, nullable = false)
+        ))
+      case _ => throw new Exception(s"Schema type `$schemaType` is not supported.")
+    }
+
+  }
 
 }

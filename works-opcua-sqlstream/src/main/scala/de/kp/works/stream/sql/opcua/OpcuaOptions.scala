@@ -51,7 +51,7 @@ case class OpcuaClientInfo(
 case class OpcuaCredentials(
   user:String, pass:String)
 
-case class OpcuaKeystore(
+case class OpcuaKeystoreInfo(
   keystoreFile:String,
   keystorePass:String,
   keystoreType:String,
@@ -68,11 +68,39 @@ class OpcuaOptions(options: DataSourceOptions) {
 
   private val settings:Map[String,String] = options.asMap.asScala.toMap
 
-  def getAddressCacheInfo:OpcuaAddressCacheInfo = ???
+  OpcuaConf.init()
 
-  def getCertInfo:OpcuaCertInfo = ???
+  def getAddressCacheInfo:OpcuaAddressCacheInfo = {
+    val cfg = OpcuaConf.getCfg("addressCacheInfo")
+    OpcuaAddressCacheInfo(
+      maximumSize = cfg.getInt("maximumSize"),
+      expireAfterSeconds = cfg.getInt("expireAfterSeconds")
+    )
+  }
 
-  def getClientInfo:OpcuaClientInfo = ???
+  def getCertInfo:OpcuaCertInfo = {
+    val cfg = OpcuaConf.getCfg("certInfo")
+    OpcuaCertInfo(
+      organization = cfg.getString("organization"),
+      organizationalUnit = cfg.getString("organizationalUnit"),
+      localityName = cfg.getString("localityName"),
+      countryCode = cfg.getString("countryCode"),
+      dnsName = cfg.getString("dnsName"),
+      ipAddress = cfg.getString("ipAddress")
+    )
+  }
+
+  def getClientInfo:OpcuaClientInfo = {
+    val cfg = OpcuaConf.getCfg("clientInfo")
+    OpcuaClientInfo(
+      clientId = cfg.getString("clientId"),
+      connectTimeout = cfg.getInt("connectTimeout"),
+      endpointUrl = cfg.getString("endpointUrl"),
+      keepAliveFailuresAllowed = cfg.getInt("keepAliveFailuresAllowed"),
+      requestTimeout = cfg.getInt("requestTimeout"),
+      subscriptionSamplingInterval = cfg.getDouble("subscriptionSamplingInterval"),
+      updateEndpointUrl = cfg.getBoolean("updateEndpointUrl"))
+  }
 
   private def getCredentials:Option[OpcuaCredentials] = {
 
@@ -95,9 +123,24 @@ class OpcuaOptions(options: DataSourceOptions) {
 
   }
 
-  def getKeystoreInfo:OpcuaKeystore = ???
+  def getKeystoreInfo:OpcuaKeystoreInfo = {
+    val cfg = OpcuaConf.getCfg("keystoreInfo")
+    OpcuaKeystoreInfo(
+      keystoreFile = cfg.getString("keystoreFile"),
+      keystorePass = cfg.getString("keystorePass"),
+      keystoreType = cfg.getString("keystoreType"),
+      certAlias = cfg.getString("certAlias"),
+      privateKeyAlias = cfg.getString("privateKeyAlias"))
+  }
 
-  def getMonitorInfo:OpcuaMonitorInfo = ???
+  def getMonitorInfo:OpcuaMonitorInfo = {
+    val cfg = OpcuaConf.getCfg("monitorInfo")
+    OpcuaMonitorInfo(
+      bufferSize = cfg.getInt("bufferSize"),
+      dataChangeTrigger = cfg.getString("dataChangeTrigger"),
+      discardOldest = cfg.getBoolean("discardOldest"),
+      samplingInterval = cfg.getDouble("samplingInterval"))
+  }
 
   def getPersistence:RocksDB = {
 
@@ -180,7 +223,7 @@ class OpcuaOptions(options: DataSourceOptions) {
    */
   def getTopics:List[String] = {
 
-    val topics = settings.get(OPCUA_STREAM_SETTINGS.OPCUA_TOPICS)
+    val topics = settings.get(OPCUA_STREAM_SETTINGS.OPCUA_STARTUP_TOPICS)
     if (topics.isEmpty) List.empty[String]
     else {
       topics.get.split(",").toList

@@ -26,7 +26,7 @@ object OPCUA_STREAM_SETTINGS {
   val OPCUA_RETRY_WAIT      = "opcua.retry.wait"
   val OPCUA_SECURITY_FOLDER = "opcua.security.folder"
   val OPCUA_SECURITY_POLICY = "opcua.security.policy"
-  val OPCUA_TOPICS          = "opcua.topics"
+  val OPCUA_STARTUP_TOPICS  = "opcua.startup.topics"
   /**
    * User credentials
    */
