@@ -1,7 +1,7 @@
-package de.kp.works.stream.sql.mqtt.paho
+package de.kp.works.stream.sql.mqtt
 
 /**
- * Copyright (c) 2020 - 2021 Dr. Krusche & Partner PartG. All rights reserved.
+ * Copyright (c) 2020 - 2022 Dr. Krusche & Partner PartG. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not
  * use this file except in compliance with the License. You may obtain a copy of
@@ -19,31 +19,14 @@ package de.kp.works.stream.sql.mqtt.paho
  *
  */
 
-import org.rocksdb.{Options, RocksDB}
-import java.util.Objects
+import org.apache.spark.sql.{DataFrame, SQLContext}
+import org.apache.spark.sql.sources.BaseRelation
+import org.apache.spark.sql.types.StructType
 
-object PahoPersistence {
+case class MqttRelation(
+  override val sqlContext: SQLContext,
+  data: DataFrame) extends BaseRelation {
 
-  var persistence: RocksDB = _
+  override def schema: StructType = data.schema
 
-  def getOrCreate(path: String): RocksDB = {
-
-    if (Objects.isNull(persistence)) {
-      RocksDB.loadLibrary()
-      persistence = RocksDB.open(new Options().setCreateIfMissing(true), path)
-    }
-
-    persistence
-
-  }
-
-  def close(): Unit = {
-
-    if (!Objects.isNull(persistence)) {
-      persistence.close()
-      persistence = null
-    }
-
-  }
 }
-

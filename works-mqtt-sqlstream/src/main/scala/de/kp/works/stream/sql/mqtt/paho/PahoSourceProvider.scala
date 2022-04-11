@@ -49,6 +49,6 @@ class PahoSourceProvider extends DataSourceV2
 
   }
 
-  override def shortName(): String = "paho"
+  override def shortName(): String = "pahoSource"
 
 }

@@ -1,6 +1,6 @@
 package de.kp.works.stream.sql.mqtt
 
-/*
+/**
  * Copyright (c) 2020 - 2021 Dr. Krusche & Partner PartG. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not

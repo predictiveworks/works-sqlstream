@@ -49,6 +49,6 @@ class HiveSourceProvider extends DataSourceV2
 
   }
 
-  override def shortName(): String = "hive"
+  override def shortName(): String = "hiveSource"
 
 }
