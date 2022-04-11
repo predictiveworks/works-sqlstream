@@ -166,8 +166,45 @@ class OpcuaSource(options: OpcuaOptions)
 
   }
 
+  private def toRow(event:OpcuaEvent):Row = ???
+  /**
+   * Build OPC-UA event receiver and start
+   * the subscription listener to the pre-defined
+   * topics
+   */
   private def buildOpcuaReceiver(): Unit = {
-    // TODO
+
+    val opcuaHandler = new OpcuaHandler() {
+      /*
+       * This method transforms the provided `event`
+       * into a Row and registers with the event
+       * buffer and store
+       */
+      override def sendOpcuaEvent(event: Option[OpcuaEvent]): Unit = {
+
+        if (event.isDefined) {
+
+          val row = toRow(event.get)
+
+          val offset = currentOffset.offset + 1L
+
+          events.put(offset, row)
+          store.store[Row](offset, row)
+
+          currentOffset = LongOffset(offset)
+
+        }
+
+        log.trace(s"Event arrived, $event")
+
+      }
+    }
+
+    val opcuaReceiver = new OpcuaReceiver(options)
+    opcuaReceiver.setOpcuaHandler(opcuaHandler)
+
+    opcuaReceiver.start()
+
   }
 
 }

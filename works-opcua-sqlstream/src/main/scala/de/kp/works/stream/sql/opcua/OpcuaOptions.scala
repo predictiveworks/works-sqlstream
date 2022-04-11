@@ -27,6 +27,10 @@ import org.rocksdb.RocksDB
 import java.nio.file.{Files, Path, Paths}
 import scala.collection.JavaConverters.mapAsScalaMapConverter
 
+case class OpcuaAddressCacheInfo(
+  maximumSize:Int,
+  expireAfterSeconds:Int)
+
 case class OpcuaCertInfo(
   organization:String,
   organizationalUnit:String,
@@ -34,6 +38,15 @@ case class OpcuaCertInfo(
   countryCode:String,
   dnsName:String,
   ipAddress:String)
+
+case class OpcuaClientInfo(
+  clientId:String,
+  connectTimeout:Int,
+  endpointUrl:String,
+  keepAliveFailuresAllowed:Int,
+  requestTimeout:Int,
+  subscriptionSamplingInterval:Double,
+  updateEndpointUrl:Boolean)
 
 case class OpcuaCredentials(
   user:String, pass:String)
@@ -45,11 +58,21 @@ case class OpcuaKeystore(
   certAlias:String,
   privateKeyAlias:String)
 
+case class OpcuaMonitorInfo(
+  bufferSize:Int,
+  dataChangeTrigger:String,
+  discardOldest:Boolean,
+  samplingInterval:Double)
+
 class OpcuaOptions(options: DataSourceOptions) {
 
   private val settings:Map[String,String] = options.asMap.asScala.toMap
 
+  def getAddressCacheInfo:OpcuaAddressCacheInfo = ???
+
   def getCertInfo:OpcuaCertInfo = ???
+
+  def getClientInfo:OpcuaClientInfo = ???
 
   private def getCredentials:Option[OpcuaCredentials] = {
 
@@ -73,6 +96,8 @@ class OpcuaOptions(options: DataSourceOptions) {
   }
 
   def getKeystoreInfo:OpcuaKeystore = ???
+
+  def getMonitorInfo:OpcuaMonitorInfo = ???
 
   def getPersistence:RocksDB = {
 
