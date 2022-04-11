@@ -166,7 +166,50 @@ class OpcuaSource(options: OpcuaOptions)
 
   }
 
-  private def toRow(event:OpcuaEvent):Row = ???
+  private def toRow(event:OpcuaEvent):Row = {
+
+    val dataValue = event.dataValue
+    val (dataValueType, dataValueValue) = {
+      dataValue match {
+        case value: Double =>
+          ("Double", value.asInstanceOf[Double])
+        case value: Float =>
+          ("Float", value.asInstanceOf[Float])
+        case value: Int =>
+          ("Int", value.asInstanceOf[Int])
+        case value: Long =>
+          ("Long", value.asInstanceOf[Long])
+        case value: Short =>
+          ("Short", value.asInstanceOf[Short])
+        case value: String =>
+          ("String", value.asInstanceOf[String])
+        case _ =>
+          ("", "")
+      }
+    }
+    val values = Seq(
+      /*
+       * TOPIC representation
+       */
+      event.address,
+      event.browsePath,
+      event.topicName,
+      event.topicType,
+      event.systemName:String,
+      /*
+       * VALUE representation
+       */
+      event.sourceTime,
+      event.sourcePicoseconds,
+      event.serverTime,
+      event.serverPicoseconds,
+      event.statusCode,
+      dataValueType,
+      dataValueValue)
+
+    Row.fromSeq(values)
+
+  }
   /**
    * Build OPC-UA event receiver and start
    * the subscription listener to the pre-defined
@@ -200,10 +243,10 @@ class OpcuaSource(options: OpcuaOptions)
       }
     }
 
-    val opcuaReceiver = new OpcuaReceiver(options)
-    opcuaReceiver.setOpcuaHandler(opcuaHandler)
+    receiver = new OpcuaReceiver(options)
+    receiver.setOpcuaHandler(opcuaHandler)
 
-    opcuaReceiver.start()
+    receiver.start()
 
   }
 
