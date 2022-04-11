@@ -21,8 +21,11 @@ package de.kp.works.stream.sql.mqtt
 
 object MQTT_STREAM_SETTINGS {
 
-  val FORMAT_HIVE  = "de.kp.works.stream.sql.mqtt.hive.HiveSourceProvider"
-  val FORMAT_PAHO  = "de.kp.works.stream.sql.mqtt.paho.PahoSourceProvider"
+  val FORMAT_HIVE_SOURCE  = "de.kp.works.stream.sql.mqtt.hive.HiveSourceProvider"
+  val FORMAT_HIVE_SINK    = "de.kp.works.stream.sql.mqtt.hive.HiveSinkProvider"
+
+  val FORMAT_PAHO_SOURCE  = "de.kp.works.stream.sql.mqtt.paho.PahoSourceProvider"
+  val FORMAT_PAHO_SINK    = "de.kp.works.stream.sql.mqtt.paho.PahoSinkProvider"
 
   /* CLIENT SUPPORT */
 
@@ -36,7 +39,13 @@ object MQTT_STREAM_SETTINGS {
   val PASSWORD       = "password"
   val PERSISTENCE    = "persistence"
   val PORT           = "port"
+  val RETRY_WAIT     = "retry.wait"
   val QOS            = "qos"
+  /*
+   * The `directory`, if the the (sink) persistence
+   * is set to `file`.
+   */
+  val STORAGE        = "storage"
   val TIMEOUT        = "timeout"
   val TOPICS         = "topics"
   val USERNAME       = "username"

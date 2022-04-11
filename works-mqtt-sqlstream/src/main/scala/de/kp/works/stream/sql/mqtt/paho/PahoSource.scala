@@ -43,7 +43,7 @@ class PahoSource(options: PahoOptions)
 
   private val events = new TrieMap[Long, Row]
 
-  private val persistence = options.getPersistence
+  private val persistence = options.getSourcePersistence
   private val store = new PahoEventStore(persistence)
 
   @GuardedBy("this")

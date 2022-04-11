@@ -20,11 +20,13 @@ package de.kp.works.stream.sql.mqtt.paho
  */
 
 import de.kp.works.stream.sql.Logging
+import de.kp.works.stream.sql.mqtt.MqttWriterCommitMessage
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.sources.v2.writer.{DataWriter, DataWriterFactory, WriterCommitMessage}
 import org.apache.spark.sql.sources.v2.writer.streaming.StreamWriter
 import org.apache.spark.sql.streaming.OutputMode
 import org.apache.spark.sql.types.StructType
+import org.eclipse.paho.client.mqttv3.{MqttClient, MqttMessage}
 
 class PahoStreamWriter(
   options:PahoOptions,
@@ -76,6 +78,77 @@ case class PahoStreamWriterFactory(
   outputMode:OutputMode,
   schema: StructType) extends DataWriterFactory[InternalRow] with Logging {
 
-  override def createDataWriter(i: Int, l: Long, l1: Long): DataWriter[InternalRow] = ???
+  override def createDataWriter(
+    partitionId: Int,
+    taskId: Long,
+    epochId: Long): DataWriter[InternalRow] = {
 
+    log.info(s"Create date writer for epochId=$epochId, taskId=$taskId, and partitionId=$partitionId.")
+    PahoStreamDataWriter(options, outputMode, schema)
+
+  }
+
+}
+
+/**
+ * A [DataWriter] for Paho writing. A data writer will be created
+ * in each partition to process incoming rows.
+ */
+case class PahoStreamDataWriter(
+  options:PahoOptions,
+  outputMode:OutputMode,
+  schema: StructType) extends DataWriter[InternalRow] with Logging {
+
+  private val mqttClient = buildMqttClient
+
+  override def abort(): Unit = {
+    log.info(s"Abort writing.")
+    if (mqttClient.nonEmpty) mqttClient.get.disconnect()
+  }
+
+  override def commit(): WriterCommitMessage = MqttWriterCommitMessage
+
+  override def write(row: InternalRow): Unit = {
+
+    val mqttMessage = new MqttMessage(row.getBinary(0))
+    mqttMessage.setQos(options.getQos)
+
+    val mqttTopic = options.getTopics.head
+    if (mqttClient.nonEmpty) {
+      try {
+        mqttClient.get.publish(mqttTopic, mqttMessage)
+
+      } catch {
+        case _:Throwable =>
+          Thread.sleep(options.getRetryWait)
+          mqttClient.get.publish(mqttTopic, mqttMessage)
+      }
+    }
+
+  }
+
+  private def buildMqttClient:Option[MqttClient] = {
+
+    val brokerUrl = options.getBrokerUrl
+    val clientId  = options.getClientId
+
+    val persistence = options.getSinkPersistence
+    val client = new MqttClient(brokerUrl, clientId, persistence)
+
+    /* Assign Mqtt options */
+    val mqttOptions = options.getMqttOptions
+    client.connect(mqttOptions)
+
+    if (client.isConnected) {
+      log.info(s"[PahoStreamDataWriter] Mqtt client connected.")
+      Some(client)
+
+    }
+    else {
+      log.warn(s"[PahoStreamDataWriter] Mqtt client not connected.")
+      None
+
+    }
+
+  }
 }

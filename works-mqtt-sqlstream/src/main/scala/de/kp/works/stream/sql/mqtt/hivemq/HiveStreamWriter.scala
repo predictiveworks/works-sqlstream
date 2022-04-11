@@ -20,6 +20,7 @@ package de.kp.works.stream.sql.mqtt.hivemq
  */
 
 import de.kp.works.stream.sql.Logging
+import de.kp.works.stream.sql.mqtt.MqttWriterCommitMessage
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.sources.v2.writer.{DataWriter, DataWriterFactory, WriterCommitMessage}
 import org.apache.spark.sql.sources.v2.writer.streaming.StreamWriter
@@ -76,6 +77,32 @@ case class HiveStreamWriterFactory(
   outputMode:OutputMode,
   schema: StructType) extends DataWriterFactory[InternalRow] with Logging {
 
-  override def createDataWriter(i: Int, l: Long, l1: Long): DataWriter[InternalRow] = ???
+  override def createDataWriter(
+    partitionId: Int,
+    taskId: Long,
+    epochId: Long): DataWriter[InternalRow] = {
 
+    log.info(s"Create date writer for epochId=$epochId, taskId=$taskId, and partitionId=$partitionId.")
+    HiveStreamDataWriter(options, outputMode, schema)
+
+  }
+
+
+}
+
+/**
+ * A [DataWriter] for Hive writing. A data writer will be created
+ * in each partition to process incoming rows.
+ */
+case class HiveStreamDataWriter(
+  options:HiveOptions,
+  outputMode:OutputMode,
+  schema: StructType) extends DataWriter[InternalRow] with Logging {
+
+  override def abort(): Unit =
+    log.info(s"Abort writing.")
+
+  override def commit(): WriterCommitMessage = MqttWriterCommitMessage
+
+  override def write(t: InternalRow): Unit = ???
 }

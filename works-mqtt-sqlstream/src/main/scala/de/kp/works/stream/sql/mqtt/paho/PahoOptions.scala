@@ -23,7 +23,8 @@ import de.kp.works.stream.sql.Logging
 import de.kp.works.stream.sql.mqtt.MQTT_STREAM_SETTINGS
 import de.kp.works.stream.ssl.SslOptions
 import org.apache.spark.sql.sources.v2.DataSourceOptions
-import org.eclipse.paho.client.mqttv3.{MqttClient, MqttConnectOptions}
+import org.eclipse.paho.client.mqttv3.persist.{MemoryPersistence, MqttDefaultFilePersistence}
+import org.eclipse.paho.client.mqttv3.{MqttClient, MqttClientPersistence, MqttConnectOptions}
 import org.rocksdb.RocksDB
 
 import javax.net.ssl.SSLSocketFactory
@@ -141,7 +142,46 @@ class PahoOptions(options: DataSourceOptions) extends Logging {
 
   }
 
-  def getPersistence:RocksDB = {
+  def getQos:Int = {
+    settings.getOrElse(MQTT_STREAM_SETTINGS.QOS, "1").toInt
+  }
+
+  def getRetryWait:Int = {
+    settings.getOrElse(MQTT_STREAM_SETTINGS.RETRY_WAIT, "500").toInt
+  }
+
+  def getSchemaType:String =
+    settings.getOrElse(MQTT_STREAM_SETTINGS.SCHEMA_TYPE, "plain")
+
+  def getSinkPersistence:MqttClientPersistence = {
+
+    val persistence = settings.getOrElse(MQTT_STREAM_SETTINGS.PERSISTENCE, "file")
+    persistence.toLowerCase match {
+      case "file" =>
+        val storage = settings.get(MQTT_STREAM_SETTINGS.PERSISTENCE)
+        storage match {
+          case Some(folder) =>
+            new MqttDefaultFilePersistence(folder)
+          case None =>
+            new MqttDefaultFilePersistence()
+        }
+
+      case "memory" =>
+        new MemoryPersistence()
+
+      case _ =>
+        val storage = settings.get(MQTT_STREAM_SETTINGS.PERSISTENCE)
+        storage match {
+          case Some(folder) =>
+            new MqttDefaultFilePersistence(folder)
+          case None =>
+            new MqttDefaultFilePersistence()
+        }
+    }
+
+  }
+
+  def getSourcePersistence:RocksDB = {
 
     val path = settings.getOrElse(MQTT_STREAM_SETTINGS.PERSISTENCE, "")
     if (path.isEmpty)
@@ -150,13 +190,6 @@ class PahoOptions(options: DataSourceOptions) extends Logging {
     PahoPersistence.getOrCreate(path)
 
   }
-
-  def getQos:Int = {
-    settings.getOrElse(MQTT_STREAM_SETTINGS.QOS, "1").toInt
-  }
-
-  def getSchemaType:String =
-    settings.getOrElse(MQTT_STREAM_SETTINGS.SCHEMA_TYPE, "plain")
 
   def getTopics:Array[String] = {
 
