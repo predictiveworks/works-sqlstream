@@ -27,8 +27,8 @@ import scala.collection.mutable
 
 object OpcuaUtils extends Logging {
 
-  final val APPLICATION_NAME = "OPC-UA SQLSTREAM@" + getHostname()
-  final val APPLICATION_URI  = s"urn:${getHostname()}:works:opcua"
+  final val APPLICATION_NAME = "OPC-UA SQLSTREAM@" + getHostname
+  final val APPLICATION_URI  = s"urn:$getHostname:works:opcua"
 
   def getRootNodeIdOfName(item:String):String = {
     item match {
