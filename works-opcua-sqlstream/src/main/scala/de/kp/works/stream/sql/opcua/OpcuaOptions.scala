@@ -19,7 +19,7 @@ package de.kp.works.stream.sql.opcua
  *
  */
 
-import de.kp.works.stream.sql.RocksPersistence
+import de.kp.works.stream.sql.{RocksPersistence, WorksOptions}
 import org.apache.spark.sql.sources.v2.DataSourceOptions
 import org.eclipse.milo.opcua.sdk.client.api.identity.{AnonymousProvider, IdentityProvider, UsernameProvider}
 import org.eclipse.milo.opcua.stack.core.security.SecurityPolicy
@@ -65,7 +65,7 @@ case class OpcuaMonitorInfo(
   discardOldest:Boolean,
   samplingInterval:Double)
 
-class OpcuaOptions(options: DataSourceOptions) {
+class OpcuaOptions(options: DataSourceOptions) extends WorksOptions {
 
   private val settings:Map[String,String] = options.asMap.asScala.toMap
 
@@ -143,7 +143,7 @@ class OpcuaOptions(options: DataSourceOptions) {
       samplingInterval = cfg.getDouble("samplingInterval"))
   }
 
-  def getPersistence:RocksDB = {
+  def getSourcePersistence:RocksDB = {
 
     val path = settings.getOrElse(OPCUA_STREAM_SETTINGS.PERSISTENCE, "")
     if (path.isEmpty)
