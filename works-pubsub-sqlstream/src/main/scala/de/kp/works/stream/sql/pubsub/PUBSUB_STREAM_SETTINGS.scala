@@ -25,6 +25,7 @@ object PUBSUB_STREAM_SETTINGS {
 
   val PERSISTENCE = "persistence"
 
+  val PUBSUB_ACCOUNT_FILE      = "pubsub.account.file"
   val PUBSUB_APP_NAME          = "pubsub.app.name"
   val PUBSUB_AUTO_ACK          = "pubsub.auto.ack"
   val PUBSUB_BACKOFF_INIT      = "pubsub.backoff.init"

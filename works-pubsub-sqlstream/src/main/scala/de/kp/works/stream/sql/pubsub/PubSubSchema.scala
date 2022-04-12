@@ -1,5 +1,7 @@
 package de.kp.works.stream.sql.pubsub
 
+import org.apache.spark.sql.types.{ArrayType, ByteType, MapType, StringType, StructField, StructType}
+
 /**
  * Copyright (c) 2019 - 2022 Dr. Krusche & Partner PartG. All rights reserved.
  *
@@ -19,8 +21,23 @@ package de.kp.works.stream.sql.pubsub
  *
  */
 
-trait PubSubHandler {
+object PubSubSchema {
+  /*
+   * This method determines the schema that is used
+   * to represent OPCUA messages.
+   */
+  def getSchema(schemaType:String): StructType = {
 
-  def sendEvents(pubSubEvents:Seq[PubSubEvent]):Unit
+    schemaType.toLowerCase match {
+      case "default" =>StructType(Array(
+        StructField("id", StringType, nullable = false),
+        StructField("publishTime", StringType, nullable = false),
+        StructField("attributes", MapType(StringType,StringType), nullable = false),
+        StructField("data", ArrayType(ByteType), nullable = false)
+      ))
+      case _ => throw new Exception(s"Schema type `$schemaType` is not supported.")
+    }
+
+  }
 
 }

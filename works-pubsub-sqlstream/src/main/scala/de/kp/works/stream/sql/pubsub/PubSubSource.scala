@@ -19,7 +19,8 @@ package de.kp.works.stream.sql.pubsub
  *
  */
 
-import de.kp.works.stream.sql.WorksSource
+import de.kp.works.stream.sql.{LongOffset, WorksSource}
+import org.apache.spark.sql.Row
 import org.apache.spark.sql.types.StructType
 
 class PubSubSource(options: PubSubOptions) extends WorksSource(options) {
@@ -27,12 +28,58 @@ class PubSubSource(options: PubSubOptions) extends WorksSource(options) {
   private var receiver:PubSubReceiver = _
   buildPubSubReceiver()
 
-  override def readSchema(): StructType = ???
+  override def readSchema(): StructType =
+    PubSubSchema.getSchema(options.getSchemaType)
 
   override def stop(): Unit = synchronized {
     receiver.stop()
   }
 
-  private def buildPubSubReceiver():Unit = ???
+  private def toRow(event:PubSubEvent):Row = {
+
+    val values = Seq(
+      event.id,
+      event.publishTime,
+      event.attributes,
+      event.data)
+
+    Row.fromSeq(values)
+
+  }
+
+  private def buildPubSubReceiver():Unit = {
+
+    val pubSubHandler = new PubSubHandler() {
+      /*
+       * This method transforms the provided `event`
+       * into a Row and registers with the event
+       * buffer and store
+       */
+      override def sendEvents(pubSubEvents: Seq[PubSubEvent]): Unit = {
+
+        if (pubSubEvents.nonEmpty) {
+          pubSubEvents.foreach(event => {
+
+            val row = toRow(event)
+            val offset = currentOffset.offset + 1L
+
+            events.put(offset, row)
+            store.store[Row](offset, row)
+
+            currentOffset = LongOffset(offset)
+
+          })
+
+        }
+
+        log.trace(s"Event arrived, $pubSubEvents")
+
+      }
+    }
+
+    receiver = new PubSubReceiver(options, pubSubHandler)
+    receiver.start()
+
+  }
 
 }

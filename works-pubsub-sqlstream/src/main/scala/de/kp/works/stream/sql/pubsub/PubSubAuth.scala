@@ -25,7 +25,7 @@ import com.google.api.services.pubsub.PubsubScopes
 
 import java.io.{File, FileInputStream, Serializable}
 
-class PubSubAuth(val serviceAccountFilePath: String) extends Serializable {
+class PubSubAuth(val serviceAccountFilePath: String) {
 
   @transient var credential: Credential = _
 

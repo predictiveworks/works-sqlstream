@@ -20,7 +20,7 @@ package de.kp.works.stream.sql.pubsub
  */
 
 import com.google.api.client.auth.oauth2.Credential
-import de.kp.works.stream.sql.{Logging, RocksPersistence, WorksOptions}
+import de.kp.works.stream.sql.{RocksPersistence, WorksOptions}
 import org.apache.spark.sql.sources.v2.DataSourceOptions
 import org.rocksdb.RocksDB
 
@@ -49,7 +49,16 @@ class PubSubOptions(options: DataSourceOptions) extends WorksOptions {
     settings.getOrElse(PUBSUB_STREAM_SETTINGS.PUBSUB_BACKOFF_MAX, "10000").toInt
   }
 
-  def getCredential:Credential = ???
+  def getCredential:Credential = {
+
+    val accountFile = settings.get(PUBSUB_STREAM_SETTINGS.PUBSUB_ACCOUNT_FILE)
+    if (accountFile.isEmpty)
+      throw new Exception(s"No service account file provided.")
+
+    val pubSubAuth = new PubSubAuth(accountFile.get)
+    pubSubAuth.getCredential
+
+  }
 
   def getMessageMax:Int = {
     settings.getOrElse(PUBSUB_STREAM_SETTINGS.PUBSUB_MESSAGE_MAX, "1000").toInt
@@ -63,6 +72,15 @@ class PubSubOptions(options: DataSourceOptions) extends WorksOptions {
 
     val projectFullName: String = s"projects/$projectName"
     projectFullName
+
+  }
+
+  def getSchemaType:String = {
+
+    val schemaType = settings.getOrElse(PUBSUB_STREAM_SETTINGS.SCHEMA_TYPE, "default")
+    if (schemaType == "default") schemaType
+    else
+      throw new Exception(s"Schema type `$schemaType` not supported.")
 
   }
 
