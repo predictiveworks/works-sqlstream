@@ -19,6 +19,10 @@
 
 ### Apache Ignite
 
+<p align="center">
+  <img src="https://github.com/predictiveworks/works-sqlstream/blob/main/images/works-sqlstream-ignite.png" width="800" alt="Apache Ignite SQL Stream">
+</p>
+
 ### Exasol
 
 ### MQTT
