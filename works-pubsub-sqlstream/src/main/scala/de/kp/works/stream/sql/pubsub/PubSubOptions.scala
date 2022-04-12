@@ -1,7 +1,7 @@
-package de.kp.works.stream.sql.mqtt.ditto
+package de.kp.works.stream.sql.pubsub
 
-/*
- * Copyright (c) 2020 - 2021 Dr. Krusche & Partner PartG. All rights reserved.
+/**
+ * Copyright (c) 2020 - 2022 Dr. Krusche & Partner PartG. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not
  * use this file except in compliance with the License. You may obtain a copy of
@@ -19,31 +19,13 @@ package de.kp.works.stream.sql.mqtt.ditto
  *
  */
 
-import org.rocksdb.{Options, RocksDB}
-import java.util.Objects
+import de.kp.works.stream.sql.Logging
+import org.apache.spark.sql.sources.v2.DataSourceOptions
 
-object DittoPersistence {
+import scala.collection.JavaConverters.mapAsScalaMapConverter
 
-  var persistence: RocksDB = _
+class PubSubOptions(options: DataSourceOptions) extends Logging {
 
-  def getOrCreate(path: String): RocksDB = {
-
-    if (Objects.isNull(persistence)) {
-      RocksDB.loadLibrary()
-      persistence = RocksDB.open(new Options().setCreateIfMissing(true), path)
-    }
-
-    persistence
-
-  }
-
-  def close(): Unit = {
-
-    if (!Objects.isNull(persistence)) {
-      persistence.close()
-      persistence = null
-    }
-
-  }
+  private val settings:Map[String,String] = options.asMap.asScala.toMap
 
 }

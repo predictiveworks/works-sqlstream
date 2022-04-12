@@ -19,6 +19,7 @@ package de.kp.works.stream.sql.mqtt.ditto
  *
  */
 
+import de.kp.works.stream.sql.RocksPersistence
 import org.apache.spark.sql.sources.v2.DataSourceOptions
 import org.eclipse.ditto.model.things.ThingId
 import org.rocksdb.RocksDB
@@ -79,7 +80,7 @@ class DittoOptions(options: DataSourceOptions) {
     if (path.isEmpty)
       throw new Exception(s"No persistence path specified.")
 
-    DittoPersistence.getOrCreate(path)
+    RocksPersistence.getOrCreate(path)
 
   }
 

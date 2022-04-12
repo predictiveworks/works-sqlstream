@@ -21,7 +21,7 @@ package de.kp.works.sql.akka
 
 import akka.actor.ActorSystem
 import com.typesafe.config.ConfigFactory
-import de.kp.works.stream.sql.Logging
+import de.kp.works.stream.sql.{Logging, RocksPersistence}
 import org.apache.spark.sql.sources.v2.DataSourceOptions
 import org.rocksdb.RocksDB
 
@@ -56,7 +56,7 @@ class AkkaOptions(options: DataSourceOptions) extends Logging {
     if (path.isEmpty)
       throw new Exception(s"No persistence path specified.")
 
-    AkkaPersistence.getOrCreate(path)
+    RocksPersistence.getOrCreate(path)
 
   }
 

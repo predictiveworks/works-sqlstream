@@ -19,6 +19,7 @@ package de.kp.works.stream.sql.opcua
  *
  */
 
+import de.kp.works.stream.sql.RocksPersistence
 import org.apache.spark.sql.sources.v2.DataSourceOptions
 import org.eclipse.milo.opcua.sdk.client.api.identity.{AnonymousProvider, IdentityProvider, UsernameProvider}
 import org.eclipse.milo.opcua.stack.core.security.SecurityPolicy
@@ -148,7 +149,7 @@ class OpcuaOptions(options: DataSourceOptions) {
     if (path.isEmpty)
       throw new Exception(s"No persistence path specified.")
 
-    OpcuaPersistence.getOrCreate(path)
+    RocksPersistence.getOrCreate(path)
 
   }
 

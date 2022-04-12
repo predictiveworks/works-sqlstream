@@ -19,7 +19,7 @@ package de.kp.works.stream.sql.mqtt.hivemq
  *
  */
 
-import de.kp.works.stream.sql.Logging
+import de.kp.works.stream.sql.{Logging, RocksPersistence}
 import de.kp.works.stream.sql.mqtt.MQTT_STREAM_SETTINGS
 import de.kp.works.stream.ssl.SslOptions
 import org.apache.spark.sql.sources.v2.DataSourceOptions
@@ -73,7 +73,7 @@ class HiveOptions(options: DataSourceOptions) extends Logging {
     if (path.isEmpty)
       throw new Exception(s"No persistence path specified.")
 
-    HivePersistence.getOrCreate(path)
+    RocksPersistence.getOrCreate(path)
 
   }
 

@@ -1,4 +1,4 @@
-package de.kp.works.sql.akka
+package de.kp.works.stream.sql.pubsub
 
 /**
  * Copyright (c) 2020 - 2022 Dr. Krusche & Partner PartG. All rights reserved.
@@ -19,31 +19,15 @@ package de.kp.works.sql.akka
  *
  */
 
-import org.rocksdb.{Options, RocksDB}
-import java.util.Objects
+object PUBSUB_STREAM_SETTINGS {
 
-object AkkaPersistence {
+  val FORMAT_AKKA = "de.kp.works.stream.sql.pubsub.PubSubSourceProvider"
 
-  var persistence: RocksDB = _
-
-  def getOrCreate(path: String): RocksDB = {
-
-    if (Objects.isNull(persistence)) {
-      RocksDB.loadLibrary()
-      persistence = RocksDB.open(new Options().setCreateIfMissing(true), path)
-    }
-
-    persistence
-
-  }
-
-  def close(): Unit = {
-
-    if (!Objects.isNull(persistence)) {
-      persistence.close()
-      persistence = null
-    }
-
-  }
+  val PERSISTENCE = "persistence"
+  /**
+   * The schema type controls the output schema
+   * assigned to the incoming PUB/SUB stream
+   */
+  val SCHEMA_TYPE = "schema.type"
 
 }

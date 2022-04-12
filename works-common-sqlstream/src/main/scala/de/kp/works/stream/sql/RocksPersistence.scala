@@ -1,4 +1,4 @@
-package de.kp.works.stream.sql.opcua
+package de.kp.works.stream.sql
 
 /**
  * Copyright (c) 2020 - 2022 Dr. Krusche & Partner PartG. All rights reserved.
@@ -23,7 +23,7 @@ import org.rocksdb.{Options, RocksDB}
 
 import java.util.Objects
 
-object OpcuaPersistence {
+object RocksPersistence {
 
   var persistence: RocksDB = _
 
