@@ -1,7 +1,7 @@
 package de.kp.works.stream.sql.mqtt.ditto
 
-/*
- * Copyright (c) 2020 - 2021 Dr. Krusche & Partner PartG. All rights reserved.
+/**
+ * Copyright (c) 2020 - 2022 Dr. Krusche & Partner PartG. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not
  * use this file except in compliance with the License. You may obtain a copy of
@@ -19,14 +19,14 @@ package de.kp.works.stream.sql.mqtt.ditto
  *
  */
 
-import de.kp.works.stream.sql.RocksPersistence
+import de.kp.works.stream.sql.{RocksPersistence, WorksOptions}
 import org.apache.spark.sql.sources.v2.DataSourceOptions
 import org.eclipse.ditto.model.things.ThingId
 import org.rocksdb.RocksDB
 
 import scala.collection.JavaConverters._
 
-class DittoOptions(options: DataSourceOptions) {
+class DittoOptions(options: DataSourceOptions) extends WorksOptions {
 
   private val settings:Map[String,String] = options.asMap.asScala.toMap
 
@@ -74,7 +74,7 @@ class DittoOptions(options: DataSourceOptions) {
   def getOAuthTokenEndpoint:Option[String] =
     settings.get(DITTO_STREAM_SETTINGS.DITTO_OAUTH_TOKEN_ENDPOINT)
 
-  def getPersistence:RocksDB = {
+  def getSourcePersistence:RocksDB = {
 
     val path = settings.getOrElse(DITTO_STREAM_SETTINGS.PERSISTENCE, "")
     if (path.isEmpty)

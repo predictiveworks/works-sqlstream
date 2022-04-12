@@ -1,7 +1,7 @@
 package de.kp.works.sql.akka
 
-/*
- * Copyright (c) 2020 - 2021 Dr. Krusche & Partner PartG. All rights reserved.
+/**
+ * Copyright (c) 2020 - 2022 Dr. Krusche & Partner PartG. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not
  * use this file except in compliance with the License. You may obtain a copy of
@@ -21,13 +21,13 @@ package de.kp.works.sql.akka
 
 import akka.actor.ActorSystem
 import com.typesafe.config.ConfigFactory
-import de.kp.works.stream.sql.{Logging, RocksPersistence}
+import de.kp.works.stream.sql.{Logging, RocksPersistence, WorksOptions}
 import org.apache.spark.sql.sources.v2.DataSourceOptions
 import org.rocksdb.RocksDB
 
 import scala.collection.JavaConverters._
 
-class AkkaOptions(options: DataSourceOptions) extends Logging {
+class AkkaOptions(options: DataSourceOptions) extends WorksOptions with Logging {
 
   private val settings:Map[String,String] = options.asMap.asScala.toMap
 
@@ -50,7 +50,7 @@ class AkkaOptions(options: DataSourceOptions) extends Logging {
       settings.getOrElse(AKKA_STREAM_SETTINGS.AKKA_MAX_RETRIES, "10").toInt
   }
 
-  def getPersistence:RocksDB = {
+  def getSourcePersistence:RocksDB = {
 
     val path = settings.getOrElse(AKKA_STREAM_SETTINGS.PERSISTENCE, "")
     if (path.isEmpty)

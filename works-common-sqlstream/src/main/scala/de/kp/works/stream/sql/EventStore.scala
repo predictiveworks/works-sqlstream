@@ -1,4 +1,4 @@
-package de.kp.works.stream.sql.opcua
+package de.kp.works.stream.sql
 
 /**
  * Copyright (c) 2020 - 2022 Dr. Krusche & Partner PartG. All rights reserved.
@@ -19,13 +19,10 @@ package de.kp.works.stream.sql.opcua
  *
  */
 
-import de.kp.works.stream.sql.Logging
-import org.rocksdb.RocksDB
-
 import java.io.{ByteArrayInputStream, ByteArrayOutputStream, ObjectInputStream, ObjectOutputStream}
 import scala.util.Try
 
-/** An event store for Akka sql streaming. */
+/** An event store for MQTT sql streaming. */
 trait EventStore {
 
   /** Store a single id and corresponding serialized event */
@@ -92,41 +89,5 @@ object JavaSerializer {
   private lazy val instance = new JavaSerializer()
 
   def getInstance(): JavaSerializer = instance
-
-}
-
-class OpcuaEventStore(
-  val persistentStore: RocksDB,
-  val serializer: Serializer) extends EventStore with Logging {
-
-  def this(persistentStore: RocksDB) =
-    this(persistentStore, JavaSerializer.getInstance())
-
-  private def get(id: Long) = persistentStore.get(id.toString.getBytes)
-
-  override def maxProcessedOffset: Long = persistentStore.getLatestSequenceNumber
-
-  /** Retrieve event corresponding to a given id. */
-  override def retrieve[T](id: Long): T = {
-    serializer.deserialize[T](get(id))
-  }
-
-  override def store[T](id: Long, message: T): Boolean = {
-
-    val bytes: Array[Byte] = serializer.serialize(message)
-    try {
-
-      persistentStore.put(id.toString.getBytes(), bytes)
-      true
-
-    } catch {
-      case e: Exception => log.warn(s"Failed to store message Id: $id", e)
-        false
-    }
-  }
-
-  override def remove[T](id: Long):Unit = {
-    persistentStore.delete(id.toString.getBytes)
-  }
 
 }

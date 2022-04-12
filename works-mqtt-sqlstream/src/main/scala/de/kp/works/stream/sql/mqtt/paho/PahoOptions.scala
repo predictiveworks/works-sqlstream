@@ -19,7 +19,7 @@ package de.kp.works.stream.sql.mqtt.paho
  *
  */
 
-import de.kp.works.stream.sql.Logging
+import de.kp.works.stream.sql.{Logging, RocksPersistence, WorksOptions}
 import de.kp.works.stream.sql.mqtt.MQTT_STREAM_SETTINGS
 import de.kp.works.stream.ssl.SslOptions
 import org.apache.spark.sql.sources.v2.DataSourceOptions
@@ -30,7 +30,7 @@ import org.rocksdb.RocksDB
 import javax.net.ssl.SSLSocketFactory
 import scala.collection.JavaConverters._
 
-class PahoOptions(options: DataSourceOptions) extends Logging {
+class PahoOptions(options: DataSourceOptions) extends WorksOptions with Logging {
 
   private val settings:Map[String,String] = options.asMap.asScala.toMap
 
@@ -187,7 +187,7 @@ class PahoOptions(options: DataSourceOptions) extends Logging {
     if (path.isEmpty)
       throw new Exception(s"No persistence path specified.")
 
-    PahoPersistence.getOrCreate(path)
+    RocksPersistence.getOrCreate(path)
 
   }
 

@@ -1,4 +1,4 @@
-package de.kp.works.stream.sql.opcua
+package de.kp.works.stream.sql
 
 /**
  * Copyright (c) 2020 - 2022 Dr. Krusche & Partner PartG. All rights reserved.
@@ -19,47 +19,42 @@ package de.kp.works.stream.sql.opcua
  *
  */
 
-import de.kp.works.stream.sql.{Logging, LongOffset, RocksEventStore}
 import org.apache.spark.sql.{Row, SparkSession}
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.sources.v2.reader.{InputPartition, InputPartitionReader}
 import org.apache.spark.sql.sources.v2.reader.streaming.{MicroBatchReader, Offset}
-import org.apache.spark.sql.types.StructType
+import org.rocksdb.RocksDB
 
 import java.util
 import java.util.Optional
 import javax.annotation.concurrent.GuardedBy
-import scala.collection.JavaConverters._
+import scala.collection.JavaConverters.seqAsJavaListConverter
 import scala.collection.concurrent.TrieMap
 import scala.collection.mutable.ListBuffer
 
-class OpcuaSource(options: OpcuaOptions)
+abstract class WorksSource(options: WorksOptions)
   extends MicroBatchReader with Logging {
 
-  private var startOffset: Offset = _
-  private var endOffset: Offset   = _
+  protected var startOffset: Offset = _
+  protected var endOffset: Offset   = _
 
-  private val events = new TrieMap[Long, Row]
+  protected val events = new TrieMap[Long, Row]
 
-  private val persistence = options.getPersistence
-  private val store = new RocksEventStore(persistence)
-
-  @GuardedBy("this")
-  private var currentOffset: LongOffset = LongOffset(-1L)
+  protected val persistence: RocksDB = options.getSourcePersistence
+  protected val store = new RocksEventStore(persistence)
 
   @GuardedBy("this")
-  private var lastOffsetCommitted: LongOffset = LongOffset(-1L)
+  protected var currentOffset: LongOffset = LongOffset(-1L)
 
-  private var receiver:OpcuaReceiver = _
-  buildOpcuaReceiver()
+  @GuardedBy("this")
+  protected var lastOffsetCommitted: LongOffset = LongOffset(-1L)
 
   override def commit(offset: Offset): Unit = synchronized {
 
     val newOffset = LongOffset.convert(offset)
     if (newOffset.isEmpty) {
 
-      val message =
-        s"[OpcuaSource] Method `commit` received an offset (${offset.toString}) that did not originate from this source.)"
+      val message = s"Method `commit` received an offset (${offset.toString}) that did not originate from this source.)"
       sys.error(message)
 
     }
@@ -67,8 +62,7 @@ class OpcuaSource(options: OpcuaOptions)
     val offsetDiff = (newOffset.get.offset - lastOffsetCommitted.offset).toInt
     if (offsetDiff < 0) {
 
-      val message =
-        s"[OpcuaSource] Offsets committed are out of order: $lastOffsetCommitted followed by $offset.toString"
+      val message = s"Offsets committed are out of order: $lastOffsetCommitted followed by $offset.toString"
       sys.error(message)
 
     }
@@ -102,8 +96,13 @@ class OpcuaSource(options: OpcuaOptions)
       val sliceStart = LongOffset.convert(startOffset).get.offset + 1
       val sliceEnd   = LongOffset.convert(endOffset).get.offset + 1
 
-      for (i <- sliceStart until sliceEnd) yield
-        events.getOrElse(i, store.retrieve[Row](i))
+      for (i <- sliceStart until sliceEnd) yield {
+        val message = events(i)
+        store.store(i,message)
+
+        events(i)
+      }
+
     }
 
     val spark = SparkSession.getActiveSession.get
@@ -112,7 +111,6 @@ class OpcuaSource(options: OpcuaOptions)
      * `slices` prepares the partitioned output
      */
     val slices = Array.fill(numPartitions)(new ListBuffer[Row])
-
     rawEvents.zipWithIndex
       .foreach {case (rawEvent, index) => slices(index % numPartitions).append(rawEvent)}
     /*
@@ -139,7 +137,6 @@ class OpcuaSource(options: OpcuaOptions)
             }
 
             override def close(): Unit = {/* Do nothing */}
-
           }
       }
 
@@ -147,106 +144,10 @@ class OpcuaSource(options: OpcuaOptions)
 
   }
 
-  override def readSchema(): StructType =
-    OpcuaSchema.getSchema(options.getSchemaType)
-
   override def setOffsetRange(start: Optional[Offset], end: Optional[Offset]): Unit = synchronized {
 
     startOffset = start.orElse(LongOffset(-1L))
     endOffset   = end.orElse(currentOffset)
-
-  }
-  /**
-   * This method stops this streaming source
-   */
-  override def stop(): Unit = synchronized {
-
-    receiver.shutdown().get()
-    persistence.close()
-
-  }
-
-  private def toRow(event:OpcuaEvent):Row = {
-
-    val dataValue = event.dataValue
-    val (dataValueType, dataValueValue) = {
-      dataValue match {
-        case value: Double =>
-          ("Double", value.asInstanceOf[Double])
-        case value: Float =>
-          ("Float", value.asInstanceOf[Float])
-        case value: Int =>
-          ("Int", value.asInstanceOf[Int])
-        case value: Long =>
-          ("Long", value.asInstanceOf[Long])
-        case value: Short =>
-          ("Short", value.asInstanceOf[Short])
-        case value: String =>
-          ("String", value.asInstanceOf[String])
-        case _ =>
-          ("", "")
-      }
-    }
-    val values = Seq(
-      /*
-       * TOPIC representation
-       */
-      event.address,
-      event.browsePath,
-      event.topicName,
-      event.topicType,
-      event.systemName:String,
-      /*
-       * VALUE representation
-       */
-      event.sourceTime,
-      event.sourcePicoseconds,
-      event.serverTime,
-      event.serverPicoseconds,
-      event.statusCode,
-      dataValueType,
-      dataValueValue)
-
-    Row.fromSeq(values)
-
-  }
-  /**
-   * Build OPC-UA event receiver and start
-   * the subscription listener to the pre-defined
-   * topics
-   */
-  private def buildOpcuaReceiver(): Unit = {
-
-    val opcuaHandler = new OpcuaHandler() {
-      /*
-       * This method transforms the provided `event`
-       * into a Row and registers with the event
-       * buffer and store
-       */
-      override def sendOpcuaEvent(event: Option[OpcuaEvent]): Unit = {
-
-        if (event.isDefined) {
-
-          val row = toRow(event.get)
-
-          val offset = currentOffset.offset + 1L
-
-          events.put(offset, row)
-          store.store[Row](offset, row)
-
-          currentOffset = LongOffset(offset)
-
-        }
-
-        log.trace(s"Event arrived, $event")
-
-      }
-    }
-
-    receiver = new OpcuaReceiver(options)
-    receiver.setOpcuaHandler(opcuaHandler)
-
-    receiver.start()
 
   }
 

@@ -19,7 +19,7 @@ package de.kp.works.stream.sql.mqtt.hivemq
  *
  */
 
-import de.kp.works.stream.sql.{Logging, RocksPersistence}
+import de.kp.works.stream.sql.{Logging, RocksPersistence, WorksOptions}
 import de.kp.works.stream.sql.mqtt.MQTT_STREAM_SETTINGS
 import de.kp.works.stream.ssl.SslOptions
 import org.apache.spark.sql.sources.v2.DataSourceOptions
@@ -27,7 +27,7 @@ import org.rocksdb.RocksDB
 
 import scala.collection.JavaConverters._
 
-class HiveOptions(options: DataSourceOptions) extends Logging {
+class HiveOptions(options: DataSourceOptions) extends WorksOptions with Logging {
 
   private val settings:Map[String,String] = options.asMap.asScala.toMap
 
@@ -67,7 +67,7 @@ class HiveOptions(options: DataSourceOptions) extends Logging {
   def getKeepAlive: Int =
     settings.getOrElse(MQTT_STREAM_SETTINGS.KEEP_ALIVE, 60.toString).toInt
 
-  def getPersistence:RocksDB = {
+  def getSourcePersistence:RocksDB = {
 
     val path = settings.getOrElse(MQTT_STREAM_SETTINGS.PERSISTENCE, "")
     if (path.isEmpty)
