@@ -1,7 +1,6 @@
-package de.kp.works.stream.sql.transform
-
+package de.kp.works.stream.sql.transform.milesight
 /**
- * Copyright (c) 2020 - 2022 Dr. Krusche & Partner PartG. All rights reserved.
+ * Copyright (c) 2022 Dr. Krusche & Partner PartG. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not
  * use this file except in compliance with the License. You may obtain a copy of
@@ -19,16 +18,12 @@ package de.kp.works.stream.sql.transform
  *
  */
 
-object Beats extends Enumeration {
+import com.google.gson.JsonElement
+import de.kp.works.stream.sql.transform.BaseTransform
+import org.apache.spark.sql.Row
 
-  type Beat = Value
+object MilesightTransform extends BaseTransform {
 
-  val FIWARE: Beats.Value  = Value(1, "fiware")
-  val FLEET: Beats.Value   = Value(2, "fleet")
-  val OPCUA: Beats.Value   = Value(3, "opcua")
-  val OPENCTI: Beats.Value = Value(4, "opencti")
-  val THINGS: Beats.Value  = Value(5, "things")
-  val TLS: Beats.Value     = Value(6, "osquery")
-  val ZEEK: Beats.Value    = Value(7, "zeek")
+  override def fromValues(eventType: String, eventData: JsonElement): Option[Seq[Row]] = ???
 
 }

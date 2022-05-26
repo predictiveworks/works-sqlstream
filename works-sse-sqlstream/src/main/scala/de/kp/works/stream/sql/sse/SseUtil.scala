@@ -18,15 +18,15 @@ package de.kp.works.stream.sql.sse
  * @author Stefan Krusche, Dr. Krusche & Partner PartG
  *
  */
-
-import de.kp.works.stream.sql.transform.{Beats, TransformUtil}
 import de.kp.works.stream.sql.transform.fiware.FiwareTransform
 import de.kp.works.stream.sql.transform.fleet.FleetTransform
+import de.kp.works.stream.sql.transform.milesight.MilesightTransform
 import de.kp.works.stream.sql.transform.opcua.OpcUaTransform
 import de.kp.works.stream.sql.transform.opencti.CTITransform
 import de.kp.works.stream.sql.transform.things.ThingsTransform
 import de.kp.works.stream.sql.transform.tls.TLSTransform
 import de.kp.works.stream.sql.transform.zeek.ZeekTransform
+import de.kp.works.stream.sql.transform.{Beats, Sensors, TransformUtil}
 import org.apache.spark.sql.Row
 
 object SseUtil {
@@ -40,13 +40,21 @@ object SseUtil {
      * SSE events that originate from one of the Works
      * Beats and other sources
      */
-    if (schemaType.startsWith("beats")) {
+    if (schemaType.startsWith("beat")) {
       /*
        * A Works Beat event in this scenario is limited
        * to a certain event schema, i.e. a mix of multiple
        * event formats cannot be supported here.
        */
-      fromBeatsValues(event)
+      fromBeatValues(event)
+
+    } else if (schemaType.startsWith("sensor")) {
+      /*
+       * A Sensor Beat event in this scenario is limited
+       * to a certain event schema, i.e. a mix of multiple
+       * event formats cannot be supported here.
+       */
+      fromSensorValues(event)
 
     } else
       /*
@@ -64,20 +72,15 @@ object SseUtil {
    * from one of Works Beats via SSE channel with the
    * best matching representation
    */
-  def fromBeatsValues(event:SseEvent):Option[Seq[Row]] = {
+  def fromBeatValues(event:SseEvent):Option[Seq[Row]] = {
     /*
      * Check whether the event type provided with
-     * this event originates from a Works Beat
+     * this event originates from a Works Beat.
+     *
+     * Note, the `eventType` for Works Beat SSE
+     * events is extracted from the event data
      */
-    val beat = try {
-      Beats.withName(event.sseType.toLowerCase)
-
-    } catch {
-      case _:Throwable => null
-    }
-
-    if (beat == null) fromPlainValues(event)
-    else {
+    try {
       /*
        * The SSE event format contains the serialized
        * payload `sseData`, which comes with a unified
@@ -92,14 +95,16 @@ object SseUtil {
       val (eventType, eventData) =
         TransformUtil.deserializeSse(event.sseData)
       /*
-       * Validate whether `eventType` and detected
-       * beat are compliant. Sample:
+       * Validate whether the `eventType` refers to
+       * a certain Works Beat
        *
        *           beat/fiware/notification
        */
       val tokens = eventType.split("\\/")
-      if (tokens(1) != beat.toString)
-        throw new Exception("Event type and Works Beat specification are inconsistent.")
+      if (tokens(0).toLowerCase != "beat")
+        throw new Exception("The provided SSE does not originate from a Works Beat")
+
+      val beat = Beats.withName(tokens(1))
       /*
        * Transform the received SSE event into a
        * Beat and schema-compliant representation.
@@ -123,7 +128,7 @@ object SseUtil {
           CTITransform.fromValues(eventType, eventData)
 
         case Beats.TLS =>
-         TLSTransform.fromValues(eventType, eventData)
+          TLSTransform.fromValues(eventType, eventData)
 
         case Beats.THINGS =>
           /*
@@ -143,6 +148,64 @@ object SseUtil {
 
       }
 
+    } catch {
+      case _:Throwable => fromPlainValues(event)
+    }
+
+  }
+  /**
+   * This method tries to resolve events originating
+   * from one of Sensor Beats via SSE channel with the
+   * best matching representation
+   */
+  def fromSensorValues(event:SseEvent):Option[Seq[Row]] = {
+    /*
+     * Check whether the event type provided with
+     * this event originates from a Sensor Beat.
+     *
+     * Note, the `eventType` for Sensor Beat SSE
+     * events is extracted from the event data
+     */
+    try {
+      /*
+       * The SSE event format contains the serialized
+       * payload `sseData`, which comes with a unified
+       * format:
+       *
+       * {
+       *   type : ...,
+       *   event: ...
+       * }
+       *
+       */
+      val (eventType, eventData) =
+        TransformUtil.deserializeSse(event.sseData)
+      /*
+       * Validate whether the `eventType` refers to
+       * a certain Sensor Beat
+       *
+       * sensor/milesight/
+       */
+      val tokens = eventType.split("\\/")
+      if (tokens(0).toLowerCase != "sensor")
+        throw new Exception("The provided SSE does not originate from a Sensor Beat")
+
+      val sensor = Sensors.withName(tokens(1))
+      /*
+       * Transform the received SSE event into a
+       * Beat and schema-compliant representation.
+       */
+      sensor match {
+        case Sensors.MILESIGHT =>
+          MilesightTransform.fromValues(eventType, eventData)
+
+        case _ =>
+          throw new Exception(s"The provided Sensor Beat is not supported.")
+
+      }
+
+    } catch {
+      case _:Throwable => fromPlainValues(event)
     }
 
   }

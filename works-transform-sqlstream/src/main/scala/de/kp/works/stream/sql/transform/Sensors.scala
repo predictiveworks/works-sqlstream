@@ -19,16 +19,9 @@ package de.kp.works.stream.sql.transform
  *
  */
 
-object Beats extends Enumeration {
+object Sensors extends Enumeration {
+  type Sensor = Value
 
-  type Beat = Value
-
-  val FIWARE: Beats.Value  = Value(1, "fiware")
-  val FLEET: Beats.Value   = Value(2, "fleet")
-  val OPCUA: Beats.Value   = Value(3, "opcua")
-  val OPENCTI: Beats.Value = Value(4, "opencti")
-  val THINGS: Beats.Value  = Value(5, "things")
-  val TLS: Beats.Value     = Value(6, "osquery")
-  val ZEEK: Beats.Value    = Value(7, "zeek")
+  val MILESIGHT:Sensor = Value(1, "milesight")
 
 }

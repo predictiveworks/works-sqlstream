@@ -37,13 +37,13 @@ object SseSchema {
      * SSE events that originate from one of the Works
      * Beats and other sources
      */
-    if (schemaType.startsWith("beats")) {
+    if (schemaType.startsWith("beat")) {
       /*
        * A Works Beat event in this scenario is limited
        * to a certain event schema, i.e. a mix of multiple
        * event formats cannot be supported here.
        */
-      getBeatsSchema(schemaType)
+      getBeatSchema(schemaType)
 
     }
     else {
@@ -58,7 +58,7 @@ object SseSchema {
     }
 
   }
-  private def getBeatsSchema(schemaType:String):StructType = {
+  private def getBeatSchema(schemaType:String):StructType = {
 
     val tokens = schemaType.split("\\.")
     val beat = try {

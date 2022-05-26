@@ -1,7 +1,7 @@
 package de.kp.works.stream.sql.sse
 
-/*
- * Copyright (c) 2020 - 2021 Dr. Krusche & Partner PartG. All rights reserved.
+/**
+ * Copyright (c) 2020 - 2022 Dr. Krusche & Partner PartG. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not
  * use this file except in compliance with the License. You may obtain a copy of
@@ -32,7 +32,11 @@ import javax.annotation.concurrent.GuardedBy
 import scala.collection.JavaConverters._
 import scala.collection.concurrent.TrieMap
 import scala.collection.mutable.ListBuffer
-
+/**
+ * [SseSource] is built to support Works & Sensor
+ * Beats as streaming sources for Apache Spark SQL
+ * or Structured Streaming
+ */
 class SseSource(options: SseOptions)
   extends MicroBatchReader with Logging {
 
