@@ -1,6 +1,6 @@
 package de.kp.works.stream.sql.sse
 
-/*
+/**
  * Copyright (c) 2020 - 2021 Dr. Krusche & Partner PartG. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not
@@ -20,13 +20,13 @@ package de.kp.works.stream.sql.sse
  */
 import de.kp.works.stream.sql.transform.fiware.FiwareTransform
 import de.kp.works.stream.sql.transform.fleet.FleetTransform
-import de.kp.works.stream.sql.transform.milesight.MilesightTransform
+import de.kp.works.stream.sql.transform.sensor.SensorTransform
 import de.kp.works.stream.sql.transform.opcua.OpcUaTransform
 import de.kp.works.stream.sql.transform.opencti.CTITransform
 import de.kp.works.stream.sql.transform.things.ThingsTransform
 import de.kp.works.stream.sql.transform.tls.TLSTransform
 import de.kp.works.stream.sql.transform.zeek.ZeekTransform
-import de.kp.works.stream.sql.transform.{Beats, Sensors, TransformUtil}
+import de.kp.works.stream.sql.transform.{Beats, TransformUtil}
 import org.apache.spark.sql.Row
 
 object SseUtil {
@@ -190,19 +190,11 @@ object SseUtil {
       if (tokens(0).toLowerCase != "sensor")
         throw new Exception("The provided SSE does not originate from a Sensor Beat")
 
-      val sensor = Sensors.withName(tokens(1))
       /*
        * Transform the received SSE event into a
        * Beat and schema-compliant representation.
        */
-      sensor match {
-        case Sensors.MILESIGHT =>
-          MilesightTransform.fromValues(eventType, eventData)
-
-        case _ =>
-          throw new Exception(s"The provided Sensor Beat is not supported.")
-
-      }
+      SensorTransform.fromValues(eventType, eventData)
 
     } catch {
       case _:Throwable => fromPlainValues(event)

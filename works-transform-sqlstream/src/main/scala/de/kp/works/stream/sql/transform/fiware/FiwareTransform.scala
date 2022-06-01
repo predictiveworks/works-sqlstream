@@ -132,8 +132,7 @@ object FiwareTransform extends BaseTransform {
 
         })
 
-      })
-        .toSeq
+      }).toSeq
 
       Some(rows)
 

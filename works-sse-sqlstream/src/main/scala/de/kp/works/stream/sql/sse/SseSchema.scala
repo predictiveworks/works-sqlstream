@@ -24,6 +24,7 @@ import de.kp.works.stream.sql.transform.fiware.FiwareSchema
 import de.kp.works.stream.sql.transform.fleet.FleetSchema
 import de.kp.works.stream.sql.transform.opcua.OpcUaSchema
 import de.kp.works.stream.sql.transform.opencti.CTISchema
+import de.kp.works.stream.sql.transform.sensor.SensorSchema
 import de.kp.works.stream.sql.transform.things.ThingsSchema
 import de.kp.works.stream.sql.transform.tls.TLSSchema
 import de.kp.works.stream.sql.transform.zeek.ZeekSchema
@@ -44,6 +45,14 @@ object SseSchema {
        * event formats cannot be supported here.
        */
       getBeatSchema(schemaType)
+
+    } else if (schemaType.startsWith("sensor")) {
+      /*
+       * A Sensor Beat event in this scenario is limited
+       * to a certain event schema, i.e. a mix of multiple
+       * event formats cannot be supported here.
+       */
+      getSensorSchema(schemaType)
 
     }
     else {
@@ -132,6 +141,9 @@ object SseSchema {
 
     }
 
+  }
+  private def getSensorSchema(schemaType:String):StructType = {
+    SensorSchema.schema()
   }
 
   /**
