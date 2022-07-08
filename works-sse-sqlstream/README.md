@@ -1,26 +1,23 @@
 
 # Server-Sent Events Structured Streaming Source
 
-This package defines the endpoint for all Works. Beats. The current implementation
-distinguishes SSEs from 
+This package defines the SSE endpoint for the WorksBeats. The following
+beat publish their events via SSE:
 
-* Fiware Beat
-* Fleet Beat
-* OPC-UA Beat
-* OpenCTI Beat
-* Osquery Beat
-* Things Beat
-* Zeek Beat
+## Fiware Beat
+## Fleet Beat
 
-The SSE event type is used to distinguish between these different beats:
+This WorksBeat monitors the file system logging of a Fleet Sensor instance
+and publishes detected file changes via multiple output channel. One of these
+channels is SSE.
 
-| Beat | Event type | Example |
-| --- | --- | --- |
-| Fiware | beat/fiware/notification | |
-| Fleet | beat/fleet/[query name] | beat/fleet/processes |
-| OPC-UA | beat/opcua | |
-| OpenCTI | beat/opencti/[action] | beat/opencti/create |
-| Osquery | beat/osquery/[format] | beat/osquery/result |
-| Things | beat/things/device | |
-| Zeek | beat/zeek/[file name] | beat/zeek/conn.log |
+The Fleet events are formatted in an NGSI alike format and are transformed into
+an Apache Spark compliant Row format, with a schema that respects one of the Osquery
+schema definitions.
+
+## OPC-UA Beat
+## OpenCTI Beat
+## Osquery Beat
+## Things Beat
+## Zeek Beat
 

@@ -118,6 +118,7 @@ object SseUtil {
            */
           FiwareTransform.fromValues(eventType, eventData)
         /*
+         * __MOD__
          * Events that originate from the [FleetBeat];
          * the respective beat transformed the event into
          * an NGSI compliant format already
@@ -143,7 +144,12 @@ object SseUtil {
            * similar to the Fiware format.
            */
           ThingsTransform.fromValues(eventType, eventData)
-
+        /*
+         * __MOD__
+         * Events that originate from the [ZeekBeat]; this beat
+         * transformed the event into an NGSI compliant format
+         * already
+         */
         case Beats.ZEEK =>
           ZeekTransform.fromValues(eventType, eventData)
 
