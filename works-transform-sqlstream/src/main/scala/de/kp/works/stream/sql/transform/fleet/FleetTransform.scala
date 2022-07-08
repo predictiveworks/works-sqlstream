@@ -1,6 +1,7 @@
 package de.kp.works.stream.sql.transform.fleet
-/*
- * Copyright (c) 2020 - 2021 Dr. Krusche & Partner PartG. All rights reserved.
+
+/**
+ * Copyright (c) 2020 - 2022 Dr. Krusche & Partner PartG. All rights reserved.
  *
  * Licensed under the Apache License, Version 2.0 (the "License"); you may not
  * use this file except in compliance with the License. You may obtain a copy of
@@ -18,10 +19,11 @@ package de.kp.works.stream.sql.transform.fleet
  *
  */
 
-import com.google.gson.JsonElement
+import com.google.gson.{JsonElement, JsonObject}
 import de.kp.works.stream.sql.json.JsonUtil
 import de.kp.works.stream.sql.transform.{BaseTransform, Beats}
 import org.apache.spark.sql.Row
+import org.apache.spark.sql.types.StructType
 
 import scala.collection.JavaConversions._
 
@@ -41,7 +43,11 @@ object FleetTransform extends BaseTransform {
 
     if (tokens(0) != Beats.FLEET.toString)
       throw new Exception("The event type provided does not describe a Fleet event.")
-
+    /*
+     * This step determine whether the specified
+     * table is known and refers to one of the
+     * supported osquery tables.
+     */
     val table = FleetTablesUtil.fromTable(tokens(2))
     if (table == null) return None
 
@@ -63,23 +69,152 @@ object FleetTransform extends BaseTransform {
        */
       val schema = FleetSchema.fromTable(table.toString)
       if (schema == null) return None
+      /*
+       * The result log format is explicitly specified
+       * for subsequent data processing and publishing
+       *
+       * {
+       *  "format" : "..."
+       *  "entity": {
+       *    "id": "...",
+       *    "type": "...",
+       *    "timestamp": {...},
+       *    "rows": [
+       *      {
+       *        "action": {...},
+       *        "<column>": {...},
+       *      }
+       *    ]
+       *  }
+       * }
+       *
+       */
+      val eventJson = eventData.getAsJsonObject
+      val entityJson = eventJson.get("entity").getAsJsonObject
+      /*
+       * Extract entity specific fields from the
+       * entity JSON and make the compatible with
+       * the schema definition
+       */
+      val entity_id = entityJson.remove("id").getAsString
+      entityJson.addProperty("entity_id", entity_id)
 
-      val batch = eventData.getAsJsonArray
-      val rows = batch.map(batchElem => {
-        /*
-         * IMPORTANT: This implementation expects that the
-         * event data originate from the Fleet Beat, as this
-         * beat normalizes and transforms the Osquery result
-         * format.
-         */
-        val batchObj = batchElem.getAsJsonObject
-        JsonUtil.json2Row(batchObj, schema)
+      val entity_type = entityJson.remove("type").getAsString
+      entityJson.addProperty("entity_type", entity_type)
 
-      }).toSeq
+      val entity_time = entityJson.remove("timestamp")
+        .getAsJsonObject
+        .get("value").getAsLong
 
-      Some(rows)
+      entityJson.addProperty("entity_time", entity_time)
+      /*
+       * Extract event format, event, differential or snapshot
+       * and transform into Spark compliant rows
+       */
+      val format = eventJson.get("format").getAsString
+      format match {
+        case "event" =>
+          transformEvent(entityJson, schema)
+
+        case "differential" =>
+          transformDifferential(entityJson, schema)
+
+        case "snapshot" =>
+          transformSnapshot(entityJson, schema)
+
+        case _ =>
+          throw new Exception(s"The specified format `$format` is not supported.")
+      }
 
     }
+
+  }
+
+  private def transformEvent(entityJson:JsonObject, schema:StructType):Option[Seq[Row]] = {
+    /*
+     * The `entityJson` contains a single row
+     * and this extracted, flatted and reassigned
+     * to the JSON object
+     */
+    val rowsJson = entityJson.remove("rows").getAsJsonArray
+    val rowJson = rowsJson.head.getAsJsonObject
+
+    rowJson.keySet.foreach(key => {
+
+      if (key == "action") {
+        entityJson.addProperty("entity_action", rowJson.get(key)
+          .getAsString)
+
+      } else {
+        entityJson.add(key, rowJson.get(key)
+          .getAsJsonObject.get("value"))
+      }
+
+    })
+    /*
+     * Transform the respective `entityJson` into
+     * a Spark [Row]
+     */
+    val row = JsonUtil.json2Row(entityJson, schema)
+    Some(Seq(row))
+
+  }
+
+  private def transformDifferential(entityJson:JsonObject, schema:StructType):Option[Seq[Row]] = {
+
+    val rowsJson = entityJson.remove("rows").getAsJsonArray
+    val rows = rowsJson.map(row => {
+
+      val newEntityJson = entityJson
+      val rowJson = row.getAsJsonObject
+
+      rowJson.keySet.foreach(key => {
+
+        if (key == "action") {
+          newEntityJson.addProperty("entity_action", rowJson.get(key)
+            .getAsString)
+
+        } else {
+          newEntityJson.add(key, rowJson.get(key)
+            .getAsJsonObject.get("value"))
+        }
+
+      })
+
+      JsonUtil.json2Row(newEntityJson, schema)
+
+    }).toSeq
+
+    Some(rows)
+
+  }
+
+  private def transformSnapshot(entityJson:JsonObject, schema:StructType):Option[Seq[Row]] = {
+
+    val rowsJson = entityJson.remove("rows").getAsJsonArray
+    val rows = rowsJson.map(row => {
+
+      val newEntityJson = entityJson
+      val rowJson = row.getAsJsonObject
+
+      rowJson.keySet.foreach(key => {
+
+        if (key == "action") {
+          newEntityJson.addProperty("entity_action", rowJson.get(key)
+            .getAsString)
+
+        } else {
+          newEntityJson.add(key, rowJson.get(key)
+            .getAsJsonObject.get("value"))
+        }
+
+      })
+
+      JsonUtil.json2Row(newEntityJson, schema)
+
+    }).toSeq
+
+    Some(rows)
 
   }
 

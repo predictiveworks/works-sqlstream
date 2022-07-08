@@ -74,18 +74,14 @@ object FleetSchema {
          * log events and therefore, the column format is extended by
          * additional metadata columns.
          *
-         * In order to avoid naming conflicts with Osquery based column
-         * names, these metadata columns are prefixed by `x_works_`.
+         * As the respective [FleetBeat] publishes the events in an
+         * NGSI compliant format, additional columns are added.
          */
         var fields = Array(
-          /* The `name` (of the query) */
-          StructField("x_works_name", StringType, nullable = false),
-          /* The timestamp of the event */
-          StructField("x_works_timestamp", LongType, nullable = false),
-          /* The hostname of the event */
-          StructField("x_works_hostname", StringType, nullable = false),
-          /* The action of the event */
-          StructField("x_works_action", StringType, nullable = false)
+          StructField("entity_id",     StringType, nullable = false),
+          StructField("entity_type",   StringType, nullable = false),
+          StructField("entity_action", StringType, nullable = false),
+          StructField("entity_times",  LongType, nullable = false)
         )
         /*
          * The remaining schema fields, that describe the columns
