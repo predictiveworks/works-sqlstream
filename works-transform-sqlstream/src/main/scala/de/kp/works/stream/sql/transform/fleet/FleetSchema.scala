@@ -75,7 +75,8 @@ object FleetSchema {
          * additional metadata columns.
          *
          * As the respective [FleetBeat] publishes the events in an
-         * NGSI compliant format, additional columns are added.
+         * NGSI compliant format, additional columns are added as a
+         * block to the Osquery defined columns.
          */
         var fields = Array(
           StructField("entity_id",     StringType, nullable = false),

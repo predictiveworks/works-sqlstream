@@ -26,7 +26,13 @@ import org.apache.spark.sql.Row
 import org.apache.spark.sql.types.StructType
 
 import scala.collection.JavaConversions._
-
+/**
+ * [FleetTransform] is part of PredictiveWorks.
+ * Cyber Analytics support. The event originates
+ * either from [FleetBeat] MQTT or SSE channel:
+ *
+ * Fleet Sensor --> [FleetBeat] --> [FleetStream]
+ */
 object FleetTransform extends BaseTransform {
 
   def fromValues(eventType: String, eventData: JsonElement): Option[Seq[Row]] = {

@@ -22,6 +22,9 @@ import com.google.gson.{JsonElement, JsonObject}
 import de.kp.works.stream.sql.json.JsonUtil
 import de.kp.works.stream.sql.transform.{BaseTransform, Beats}
 import org.apache.spark.sql.Row
+import org.apache.spark.sql.types.{StringType, StructField, StructType}
+
+import scala.collection.JavaConversions.asScalaSet
 
 object ZeekTransform extends BaseTransform {
   /*
@@ -52,24 +55,59 @@ object ZeekTransform extends BaseTransform {
      * that refers to log file name
      */
     val file = tokens(2)
-
-    val schema = ZeekSchema.fromFile(file)
-    if (schema == null) return None
+    /*
+     * The provide Zeek event is published by the Zeek Beat
+     * and is formatted in an NGSI compliant format.
+     *
+     * This implies that `entity_id` and `entity_type` are
+     * additional columns to complement the Zeek schema
+     */
+    val zeekSchema = ZeekSchema.fromFile(file)
+    if (zeekSchema == null) return None
 
     try {
-
-      val name = file.replace(".log", "")
       /*
-       * Determine method to replace Zeek specific names
-       * to harmonize field names
+       * Enrich schema with NGSI entity `id` and `type`
        */
-      val methods = ZeekReplace.getClass.getMethods
-      val method = methods.filter(m => m.getName == s"replace_$name").head
+      val schema = StructType(
+        Array(
+          StructField("entity_id",   StringType, nullable = false),
+          StructField("entity_type", StringType, nullable = false)) ++ zeekSchema.fields)
 
-      val oldObj = eventData.getAsJsonObject
-      val newObj = method.invoke(ZeekReplace, oldObj).asInstanceOf[JsonObject]
+      val entityJson = eventData.getAsJsonObject
 
-      val row = JsonUtil.json2Row(newObj, schema)
+      val entity_id = entityJson.remove("id")
+      entityJson.add("entity_id", entity_id)
+
+      val entity_type = entityJson.remove("type")
+      entityJson.add("entity_type", entity_type)
+
+      entityJson.keySet.foreach(key => {
+        /*
+         * NGSI attribute format
+         *
+         * {
+         *   "<attribute-name>": {
+         *     "metadata": {...},
+         *     "type": "...",
+         *     "value": ...
+         *   }
+         * }
+         *
+         * is flattened to "<attribute-name>": value
+         *
+         */
+        if (!Seq("entity_id", "entity_type").contains(key)) {
+
+          val attrValue = entityJson.remove(key)
+            .getAsJsonObject.get("value")
+
+          entityJson.add(key, attrValue)
+
+        }
+      })
+
+      val row = JsonUtil.json2Row(entityJson, schema)
       Some(Seq(row))
 
     } catch {
