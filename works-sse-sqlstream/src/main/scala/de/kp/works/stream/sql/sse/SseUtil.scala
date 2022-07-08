@@ -117,7 +117,11 @@ object SseUtil {
            * and can be described with a single schema
            */
           FiwareTransform.fromValues(eventType, eventData)
-
+        /*
+         * Events that originate from the [FleetBeat];
+         * the respective beat transformed the event into
+         * an NGSI compliant format already
+         */
         case Beats.FLEET =>
           FleetTransform.fromValues(eventType, eventData)
 
