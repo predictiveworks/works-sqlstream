@@ -110,13 +110,14 @@ object SseUtil {
        * Beat and schema-compliant representation.
        */
       beat match {
+        /*
+         * Events that originate from a Fiware Context
+         * Broker have a common NGSI-compliant format,
+         * and can be described with a single schema
+         */
         case Beats.FIWARE =>
-          /*
-           * Events that originate from a Fiware Context
-           * Broker have a common NGSI-compliant format,
-           * and can be described with a single schema
-           */
           FiwareTransform.fromValues(eventType, eventData)
+
         /*
          * __MOD__
          * Events that originate from the [FleetBeat];
@@ -126,6 +127,12 @@ object SseUtil {
         case Beats.FLEET =>
           FleetTransform.fromValues(eventType, eventData)
 
+        /*
+         * __MOD__
+         * Events that originate from the [OpcUaBeat];
+         * in contrast to other beats, the provided event
+         * leverages the [OpcUaEvent] format.
+         */
         case Beats.OPCUA =>
           OpcUaTransform.fromValues(eventType, eventData)
 
